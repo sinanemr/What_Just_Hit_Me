@@ -53,9 +53,30 @@ const MZX=(f,ox)=>f.x+f.facing*S(ox);        /* muzzle X from sprite offset */
 const MZY=(f,oy)=>f.y-S(oy);                 /* muzzle Y from sprite offset (up from feet) */
 const cv=document.getElementById("gameCanvas"), ctxMain=cv.getContext("2d");
 let ctx=ctxMain;
-const RENDER_SCALE=CFG.viewport.renderScale;                          /* supersample: internal res = 2x world, CSS still shows same size -> sharper art */
+const RENDER_SCALE=CFG.viewport.renderScale;                          /* base supersample (fallback density) */
+const MAX_SS=3;                                                       /* cap on the world-buffer supersample density (memory bound at high DPR) */
 applyViewport(cv);
 ctxMain.imageSmoothingEnabled=false;
+/* -------------------------------------------------------------------------------------------------
+   HiDPI: size the canvas BACKING store to its true device-pixel box so the browser displays it 1:1
+   (no blurry upscale). Backing = CSS display size * devicePixelRatio, locked to the exact W:H aspect.
+   renderGame then rasterises + composites at this real device resolution. Re-fits on resize / zoom /
+   monitor change. When the fight screen is hidden the box is 0 -> we skip and refit once it shows. */
+function fitCanvas(){
+ if(!cv)return;
+ const rect=cv.getBoundingClientRect();
+ if(rect.width<1)return;                                             /* not visible yet */
+ const dpr=window.devicePixelRatio||1;
+ const bw=Math.max(1,Math.round(rect.width*dpr));
+ const bh=Math.max(1,Math.round(bw*H/W));                           /* derive height from width -> exact aspect + uniform scale */
+ if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;ctxMain.imageSmoothingEnabled=false;}
+}
+if(typeof window!=="undefined"){
+ if(window.ResizeObserver)new ResizeObserver(fitCanvas).observe(cv);   /* catches layout + fullscreen size changes */
+ window.addEventListener("resize",fitCanvas);
+ (function watchDpr(){try{const mq=matchMedia("(resolution: "+(window.devicePixelRatio||1)+"dppx)");
+   mq.addEventListener("change",function(){fitCanvas();watchDpr();},{once:true});}catch(e){}})();   /* re-arm on each DPR change (monitor move / browser zoom) */
+}
 
 /* =============================================================================
    HERO DATA -- everything about a fighter lives together below, one block per hero:
@@ -3065,13 +3086,16 @@ function updateSimulation(dt){
    buffer to the screen by camScale -> smooth zoom-out with NO per-layer resample crawl. Sized for
    the widest possible view (whole stage at max zoom-out) + shake padding; created once. */
 const CAM_PAD=24;   /* world-px margin rendered around the view so screen-shake never reveals a buffer edge */
-let _worldBuf=null,_worldCtx=null;
-function worldBuffer(){
- if(!_worldBuf){
-  _worldBuf=document.createElement("canvas");
-  _worldBuf.width =Math.ceil((WORLD_W          +2*CAM_PAD)*RENDER_SCALE)+4;
-  _worldBuf.height=Math.ceil((H*WORLD_W/W       +2*CAM_PAD)*RENDER_SCALE)+4;
+let _worldBuf=null,_worldCtx=null,_worldBufDen=0;
+/* Offscreen buffer at density `den` (backing px per world px). Re-allocated only when the density
+   changes (i.e. on a DPI/resize), sized for the widest possible view (whole stage) + shake pad. */
+function worldBuffer(den){
+ if(!_worldBuf||_worldBufDen!==den){
+  _worldBuf=_worldBuf||document.createElement("canvas");
+  _worldBuf.width =Math.ceil((WORLD_W    +2*CAM_PAD)*den)+4;
+  _worldBuf.height=Math.ceil((H*WORLD_W/W+2*CAM_PAD)*den)+4;
   _worldCtx=_worldBuf.getContext("2d");
+  _worldBufDen=den;
  }
  return _worldBuf;
 }
@@ -3079,13 +3103,25 @@ function worldBuffer(){
    Pure render — reads state without advancing it, so both host and guest use it. */
 function renderGame(){
  const s=camScale;
+ /* dpx = real device (backing) pixels per logical px; bden = world-buffer density (rasterise the
+    world at true device resolution so it's crisp on HiDPI, capped for memory). */
+ const dpx=(cv.width/W)||RENDER_SCALE;
+ const bden=Math.min(MAX_SS,Math.max(RENDER_SCALE,dpx));
  const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD;     /* top-left of the (padded) visible world region */
  const visW=W/s+CAM_PAD*2, visH=H/s+CAM_PAD*2;
- const buf=worldBuffer(), b=_worldCtx;
- const sw=Math.min(buf.width,  visW*RENDER_SCALE), sh=Math.min(buf.height, visH*RENDER_SCALE);
+ const buf=worldBuffer(bden), b=_worldCtx;
+ const sw=Math.min(buf.width,  visW*bden), sh=Math.min(buf.height, visH*bden);
+ /* Scroll the buffer by a WHOLE buffer-pixel: with nearest-neighbor rasterisation a fractional
+    scroll makes every static layer crawl frame-to-frame as the camera pans (the root cause of the
+    "tearing when moving"). Snapping the world->buffer origin to an integer pixel keeps static art
+    pixel-locked; the leftover sub-pixel (fracX/fracY, in world units) is applied in the smooth
+    composite below, so panning still looks perfectly smooth. */
+ const oxPx=wx0*bden, oyPx=wy0*bden;
+ const oxi=Math.round(oxPx), oyi=Math.round(oyPx);
+ const fracX=(oxPx-oxi)/bden, fracY=(oyPx-oyi)/bden;
  b.setTransform(1,0,0,1,0,0);
  b.clearRect(0,0,Math.ceil(sw)+2,Math.ceil(sh)+2);
- b.setTransform(RENDER_SCALE,0,0,RENDER_SCALE,-wx0*RENDER_SCALE,-wy0*RENDER_SCALE);   /* world -> buffer, constant density */
+ b.setTransform(bden,0,0,bden,-oxi,-oyi);   /* world -> buffer, constant density, INTEGER scroll */
  b.imageSmoothingEnabled=false;            /* match the old main-canvas default; hi-res sprites + backdrop opt into smoothing themselves */
  const _prevCtx=ctx; ctx=b;                /* redirect every world-draw below into the buffer */
  drawStage(tGlobal);                       /* backdrop now scales WITH the fighters (one uniform zoom) */
@@ -3146,11 +3182,11 @@ function renderGame(){
  /* ---- composite: one smooth scale of the whole world buffer onto the screen (+ screen shake) ---- */
  const shk=shake*SETTINGS_shakeScale();
  const ox=shk>0?rand(-3,3)*shk*3:0, oy=shk>0?rand(-2,2)*shk*3:0;
- ctxMain.setTransform(RENDER_SCALE,0,0,RENDER_SCALE,0,0);
+ ctxMain.setTransform(dpx,0,0,dpx,0,0);    /* logical W×H -> real device-pixel backing (1:1 on screen) */
  ctxMain.imageSmoothingEnabled=true;ctxMain.imageSmoothingQuality="high";
- ctxMain.drawImage(buf, 0,0,sw,sh,  -s*CAM_PAD+ox, -s*CAM_PAD+oy, visW*s, visH*s);
+ ctxMain.drawImage(buf, 0,0,sw,sh,  s*(-CAM_PAD-fracX)+ox, s*(-CAM_PAD-fracY)+oy, visW*s, visH*s);
  ctxMain.imageSmoothingEnabled=false;
- ctx=ctxMain;drawHUD();                    /* HUD stays screen-fixed, crisp */
+ ctx=ctxMain;drawHUD();                    /* HUD stays screen-fixed, crisp, at device resolution */
  ctxMain.setTransform(1,0,0,1,0,0);
 }
 /* The main game loop (one requestAnimationFrame tick). Local + online-host run
@@ -3305,7 +3341,8 @@ function refreshSelect(){
 function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  /* the fight screen gets the wide shell so the 720px viewport lands at 2x */
- document.getElementById("app").classList.toggle("wide",id==="fight");}
+ document.getElementById("app").classList.toggle("wide",id==="fight");
+ if(id==="fight")fitCanvas();}   /* size the backing to real device pixels now that the canvas has a box */
 document.getElementById("startBtn").addEventListener("click",()=>showScreen("select"));
 document.getElementById("selBackBtn").addEventListener("click",()=>showScreen("title"));
 document.getElementById("modeSel").addEventListener("change",e=>{cpuMode=e.target.value==="cpu";refreshSelect();});
