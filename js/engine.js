@@ -53,7 +53,13 @@ const MZX=(f,ox)=>f.x+f.facing*S(ox);        /* muzzle X from sprite offset */
 const MZY=(f,oy)=>f.y-S(oy);                 /* muzzle Y from sprite offset (up from feet) */
 const cv=document.getElementById("gameCanvas"), ctxMain=cv.getContext("2d");
 let ctx=ctxMain;
+<<<<<<< Updated upstream
 const RENDER_SCALE=CFG.viewport.renderScale;                          /* supersample: internal res = 2x world, CSS still shows same size -> sharper art */
+=======
+const RENDER_SCALE=CFG.viewport.renderScale;                          /* base supersample (fallback density) */
+const SSAA=1.4;                                                       /* supersample ABOVE device resolution -> anti-aliased edges (down-sampled in the composite) */
+const MAX_SS=3.5;                                                     /* hard cap on world-buffer density (memory bound at high DPR); ~82MB buffer at the cap */
+>>>>>>> Stashed changes
 applyViewport(cv);
 ctxMain.imageSmoothingEnabled=false;
 
@@ -2512,12 +2518,37 @@ function updateSimulation(dt){
 /* Draws the current game state (stage, fighters, projectiles, effects, HUD).
    Pure render — reads state without advancing it, so both host and guest use it. */
 function renderGame(){
+<<<<<<< Updated upstream
  ctx.save();
  ctx.scale(RENDER_SCALE,RENDER_SCALE);      /* map world px -> supersampled device px */
  const shk=shake*SETTINGS_shakeScale();
  if(shk>0)ctx.translate(rand(-3,3)*shk*3,rand(-2,2)*shk*3);
  ctx.save();
  ctx.translate(0,GROUND);ctx.scale(camScale,camScale);ctx.translate(-camX,-GROUND);   /* WORLD space: uniform zoom anchored at the ground line, then pan */
+=======
+ const s=camScale;
+ /* dpx = real device (backing) pixels per logical px; bden = world-buffer density (rasterise the
+    world at true device resolution so it's crisp on HiDPI, capped for memory). */
+ const dpx=(cv.width/W)||RENDER_SCALE;
+ const bden=Math.min(MAX_SS,Math.max(RENDER_SCALE,dpx*SSAA));   /* render the world above device res, then down-sample in the composite (SSAA) */
+ const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD;     /* top-left of the (padded) visible world region */
+ const visW=W/s+CAM_PAD*2, visH=H/s+CAM_PAD*2;
+ const buf=worldBuffer(bden), b=_worldCtx;
+ const sw=Math.min(buf.width,  visW*bden), sh=Math.min(buf.height, visH*bden);
+ /* Scroll the buffer by a WHOLE buffer-pixel: with nearest-neighbor rasterisation a fractional
+    scroll makes every static layer crawl frame-to-frame as the camera pans (the root cause of the
+    "tearing when moving"). Snapping the world->buffer origin to an integer pixel keeps static art
+    pixel-locked; the leftover sub-pixel (fracX/fracY, in world units) is applied in the smooth
+    composite below, so panning still looks perfectly smooth. */
+ const oxPx=wx0*bden, oyPx=wy0*bden;
+ const oxi=Math.round(oxPx), oyi=Math.round(oyPx);
+ const fracX=(oxPx-oxi)/bden, fracY=(oyPx-oyi)/bden;
+ b.setTransform(1,0,0,1,0,0);
+ b.clearRect(0,0,Math.ceil(sw)+2,Math.ceil(sh)+2);
+ b.setTransform(bden,0,0,bden,-oxi,-oyi);   /* world -> buffer, constant density, INTEGER scroll */
+ b.imageSmoothingEnabled=false;            /* match the old main-canvas default; hi-res sprites + backdrop opt into smoothing themselves */
+ const _prevCtx=ctx; ctx=b;                /* redirect every world-draw below into the buffer */
+>>>>>>> Stashed changes
  drawStage(tGlobal);                       /* backdrop now scales WITH the fighters (one uniform zoom) */
  if(typeof drawWaves==="function")drawWaves();      /* subtle water shimmer on the sea (js/waves.js) */
  if(typeof drawBirds==="function")drawBirds();      /* ambient seagulls in the sky (js/birds.js) — behind everything */

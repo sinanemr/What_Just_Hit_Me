@@ -8,7 +8,10 @@ body{
   min-height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
 #app{width:960px; max-width:98vw; user-select:none;}
-#app.wide{width:var(--game-display-width); max-width:98vw;}   /* fight screen: canvas at crisp renderScale */
+/* fight screen: fill as much of the monitor as fits at the game's 8:3 aspect (was capped at 1440px).
+   min() picks whichever of width/height is the binding constraint so it never overflows either way.
+   fitCanvas() then sizes the backing store to this box * devicePixelRatio -> native-resolution render. */
+#app.wide{width:min(96vw, calc(92vh * 8 / 3)); max-width:96vw;}
 .screen{display:none;}
 .screen.active{display:block;}
 .px{font-family:'Press Start 2P',monospace;}
