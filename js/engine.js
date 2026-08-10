@@ -54,7 +54,8 @@ const MZY=(f,oy)=>f.y-S(oy);                 /* muzzle Y from sprite offset (up 
 const cv=document.getElementById("gameCanvas"), ctxMain=cv.getContext("2d");
 let ctx=ctxMain;
 const RENDER_SCALE=CFG.viewport.renderScale;                          /* base supersample (fallback density) */
-const MAX_SS=3;                                                       /* cap on the world-buffer supersample density (memory bound at high DPR) */
+const SSAA=1.4;                                                       /* supersample ABOVE device resolution -> anti-aliased edges (down-sampled in the composite) */
+const MAX_SS=3.5;                                                     /* hard cap on world-buffer density (memory bound at high DPR); ~82MB buffer at the cap */
 applyViewport(cv);
 ctxMain.imageSmoothingEnabled=false;
 /* -------------------------------------------------------------------------------------------------
@@ -3106,7 +3107,7 @@ function renderGame(){
  /* dpx = real device (backing) pixels per logical px; bden = world-buffer density (rasterise the
     world at true device resolution so it's crisp on HiDPI, capped for memory). */
  const dpx=(cv.width/W)||RENDER_SCALE;
- const bden=Math.min(MAX_SS,Math.max(RENDER_SCALE,dpx));
+ const bden=Math.min(MAX_SS,Math.max(RENDER_SCALE,dpx*SSAA));   /* render the world above device res, then down-sample in the composite (SSAA) */
  const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD;     /* top-left of the (padded) visible world region */
  const visW=W/s+CAM_PAD*2, visH=H/s+CAM_PAD*2;
  const buf=worldBuffer(bden), b=_worldCtx;
