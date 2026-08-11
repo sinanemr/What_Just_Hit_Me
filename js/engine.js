@@ -1816,11 +1816,11 @@ function drawStage(t){
   /* SMOOTH the backdrop: it's a painting, not pixel art. With nearest-neighbor (the global
      default) the camera zoom/pan resamples it row-by-row every frame -> the crawl/"tearing"
      while the camera moves. Bilinear makes the moving backdrop stable. Restore after. */
-  const _sm=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+  const _sm=ctx.imageSmoothingEnabled,_sq=ctx.imageSmoothingQuality;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="low";   /* bilinear: cheap per-frame, indistinguishable on a soft painting */
   ctx.drawImage(STAGE_BG, 0,0,iw,2, 0,-EXT, WORLD_W, EXT);        /* sky, extended upward */
   ctx.drawImage(STAGE_BG, 0,ih-2,iw,2, 0,H, WORLD_W, EXT);        /* ground, extended downward */
   ctx.drawImage(STAGE_BG, 0,0,iw,ih, 0,0, WORLD_W, H);           /* the painting itself */
-  ctx.imageSmoothingEnabled=_sm;
+  ctx.imageSmoothingEnabled=_sm;ctx.imageSmoothingQuality=_sq;
  }else{
   ctx.fillStyle="#b37ba2";ctx.fillRect(-400,-900,WORLD_W+800,900+H);
   ctx.fillStyle="#c3a37e";ctx.fillRect(-400,164,WORLD_W+800,H-164+900);
@@ -3107,10 +3107,18 @@ function renderGame(){
  /* dpx = real device (backing) pixels per logical px; bden = world-buffer density (rasterise the
     world at true device resolution so it's crisp on HiDPI, capped for memory). */
  const dpx=(cv.width/W)||RENDER_SCALE;
- const bden=Math.min(MAX_SS,Math.max(RENDER_SCALE,dpx*SSAA));   /* render the world above device res, then down-sample in the composite (SSAA) */
+ const _rq=(typeof SETTINGS_renderQuality==="function")?SETTINGS_renderQuality():{ssaa:SSAA,maxss:MAX_SS};   /* Visuals > Render Quality */
+ const _ssaa=_rq.ssaa;
+ const dsat=Math.min(_rq.maxss,Math.max(RENDER_SCALE,dpx*_ssaa));   /* max density (zoomed-in); also the buffer ALLOCATION density (stable per display) */
+ /* PERF: scale the render density with the zoom. When zoomed out (s<1) the buffer is shrunk by s in
+    the composite anyway, so rendering it at full density just burns CPU on pixels that get thrown
+    away. Using s*dpx*SSAA keeps the *rasterised* pixel count ~screen-constant at every zoom level
+    (visW*visH*bden^2 is invariant) -> no fps cliff on zoom-out, and no visible quality loss since the
+    on-screen sampling density (s*dpx) is matched exactly (x SSAA). */
+ const bden=Math.max(1,Math.min(dsat, dpx*s*_ssaa));
  const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD;     /* top-left of the (padded) visible world region */
  const visW=W/s+CAM_PAD*2, visH=H/s+CAM_PAD*2;
- const buf=worldBuffer(bden), b=_worldCtx;
+ const buf=worldBuffer(dsat), b=_worldCtx;
  const sw=Math.min(buf.width,  visW*bden), sh=Math.min(buf.height, visH*bden);
  /* Scroll the buffer by a WHOLE buffer-pixel: with nearest-neighbor rasterisation a fractional
     scroll makes every static layer crawl frame-to-frame as the camera pans (the root cause of the
@@ -3184,22 +3192,58 @@ function renderGame(){
  const shk=shake*SETTINGS_shakeScale();
  const ox=shk>0?rand(-3,3)*shk*3:0, oy=shk>0?rand(-2,2)*shk*3:0;
  ctxMain.setTransform(dpx,0,0,dpx,0,0);    /* logical W×H -> real device-pixel backing (1:1 on screen) */
- ctxMain.imageSmoothingEnabled=true;ctxMain.imageSmoothingQuality="high";
+ ctxMain.imageSmoothingEnabled=true;ctxMain.imageSmoothingQuality="low";   /* bilinear: the down-scale is only ~1/SSAA, so cheap & indistinguishable from "high" here */
  ctxMain.drawImage(buf, 0,0,sw,sh,  s*(-CAM_PAD-fracX)+ox, s*(-CAM_PAD-fracY)+oy, visW*s, visH*s);
  ctxMain.imageSmoothingEnabled=false;
  ctx=ctxMain;drawHUD();                    /* HUD stays screen-fixed, crisp, at device resolution */
+ if(typeof SETTINGS_showPerf==="function"&&SETTINGS_showPerf())drawPerfOverlay(dpx,bden,s);
  ctxMain.setTransform(1,0,0,1,0,0);
+}
+/* ---- Performance overlay (FPS + main-thread CPU/frame-time + resolution). Toggle in Visuals settings.
+   "CPU" here is the JS main-thread busy fraction (the only CPU cost a webview can measure) — the % of
+   each frame's budget spent running the game, split into sim (physics/AI) vs draw (render). ---- */
+const _perf={ts:0,fps:0,frame:0,upd:0,rnd:0,cpu:0,_n:0,_int:0,_f:0,_u:0,_r:0,_last:0};
+function perfRecord(ts,t0,tUpd,tRnd){
+ const P=_perf, interval=P.ts?(ts-P.ts):16.7; P.ts=ts;
+ P._n++; P._int+=interval; P._f+=(tRnd-t0); P._u+=(tUpd-t0); P._r+=(tRnd-tUpd);
+ if(ts-P._last>=250){                      /* refresh the readout 4x/sec so it's legible */
+  const n=P._n||1;
+  P.fps=1000/(P._int/n); P.frame=P._f/n; P.upd=P._u/n; P.rnd=P._r/n;
+  P.cpu=Math.min(100,(P._f/(P._int||1))*100);
+  P._n=P._int=P._f=P._u=P._r=0; P._last=ts;
+ }
+}
+function drawPerfOverlay(dpx,bden,s){
+ const P=_perf, g=ctxMain;
+ g.setTransform(dpx,0,0,dpx,0,0);          /* draw in logical px at device resolution */
+ const lines=[
+  "FPS  "+P.fps.toFixed(0),
+  "CPU  "+P.cpu.toFixed(0)+"%   "+P.frame.toFixed(1)+"ms",
+  "sim "+P.upd.toFixed(1)+"  draw "+P.rnd.toFixed(1),
+  "res "+dpx.toFixed(2)+"x  buf "+bden.toFixed(2)+"x  zoom "+s.toFixed(2)
+ ];
+ if(typeof performance!=="undefined"&&performance.memory)
+  lines.push("heap "+(performance.memory.usedJSHeapSize/1048576).toFixed(0)+"MB");
+ g.font="7px monospace"; g.textBaseline="top"; g.textAlign="left";
+ const lh=9, padX=5, padY=4, boxW=120, boxH=lines.length*lh+padY*2, x0=4, y0=4;
+ g.fillStyle="rgba(6,4,16,0.62)"; g.fillRect(x0,y0,boxW,boxH);
+ g.fillStyle="rgba(120,90,240,0.5)"; g.fillRect(x0,y0,boxW,1); g.fillRect(x0,y0+boxH-1,boxW,1);
+ const fpsCol=P.fps>=55?"#7de08a":(P.fps>=30?"#f2c230":"#ff5e6e");
+ for(let i=0;i<lines.length;i++){ g.fillStyle=i===0?fpsCol:"#d8cfe8"; g.fillText(lines[i],x0+padX,y0+padY+i*lh); }
 }
 /* The main game loop (one requestAnimationFrame tick). Local + online-host run
    the simulation then render; the online guest applies/interpolates snapshots and
    only renders (no authoritative simulation). */
 function loop(ts){
  if(!running)return;
+ const _t0=performance.now();
  /* ---- ONLINE GUEST: render authoritative snapshots, never simulate ---- */
  if(typeof ONLINE!=="undefined"&&ONLINE.mode==="match-guest"){
   const gdt=Math.min(.05,(ts-lastT)/1000||.016);lastT=ts;
   ONLINE_guestTick(gdt,ts);
+  const _t1=performance.now();
   renderGame();
+  perfRecord(ts,_t0,_t1,performance.now());
   requestAnimationFrame(loop);
   return;
  }
@@ -3207,7 +3251,9 @@ function loop(ts){
  const dt=Math.min(.033,(ts-lastT)/1000||.016)*(CFG.gameSpeed||1);lastT=ts;   /* global slow-down (CFG.gameSpeed) */
  updateSimulation(dt);
  if(typeof ONLINE!=="undefined"&&ONLINE.mode==="match-host")ONLINE_hostMaybeSnapshot(ts);
+ const _t1=performance.now();
  renderGame();
+ perfRecord(ts,_t0,_t1,performance.now());
  requestAnimationFrame(loop);
 }
 /* =============== TITLE ORB (removed from the menu — no-op if the canvas isn't present) =============== */

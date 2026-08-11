@@ -27,7 +27,9 @@ const DEFAULT_SETTINGS = {
     screenShake: 70,         // 0..100
     backgroundAnimation: true,
     combatText: true,
-    controlHelper: "always"  // always | menus | off
+    controlHelper: "always", // always | menus | off
+    renderQuality: "quality",// performance | balanced | quality | ultra  (supersample / resolution)
+    showPerf: false          // FPS + main-thread CPU/frame-time overlay
   },
   accessibility: {
     reduceMotion: false,
@@ -82,6 +84,8 @@ function validateSettings(s){
   s.visuals.backgroundAnimation = !!s.visuals.backgroundAnimation;
   s.visuals.combatText = !!s.visuals.combatText;
   s.visuals.controlHelper = oneOf(s.visuals.controlHelper,["always","menus","off"],"always");
+  s.visuals.renderQuality = oneOf(s.visuals.renderQuality,["performance","balanced","quality","ultra"],"quality");
+  s.visuals.showPerf = !!s.visuals.showPerf;
   s.accessibility.reduceMotion = !!s.accessibility.reduceMotion;
   s.accessibility.reducedFlashing = !!s.accessibility.reducedFlashing;
   s.accessibility.largeMenuText = !!s.accessibility.largeMenuText;
@@ -116,6 +120,16 @@ function getRoundTimeValue(v){ return v==="unlimited" ? Infinity : Number(v); }
 function SETTINGS_shakeScale(){ return activeSettings.accessibility.reduceMotion ? 0 : activeSettings.visuals.screenShake/100; }
 function SETTINGS_bgAnim(){ return !activeSettings.accessibility.reduceMotion && activeSettings.visuals.backgroundAnimation; }
 function SETTINGS_combatText(){ return activeSettings.visuals.combatText; }
+/* Render-quality presets -> ssaa (supersample factor above device res) + maxss (density cap).
+   Lower = cheaper/blurrier, higher = sharper/heavier. Read by renderGame each frame. */
+const RENDER_QUALITY_PRESETS = {
+  performance: { ssaa:1.0,  maxss:2.0 },
+  balanced:    { ssaa:1.25, maxss:3.0 },
+  quality:     { ssaa:1.4,  maxss:3.5 },
+  ultra:       { ssaa:1.8,  maxss:4.0 }
+};
+function SETTINGS_renderQuality(){ return RENDER_QUALITY_PRESETS[activeSettings.visuals.renderQuality] || RENDER_QUALITY_PRESETS.quality; }
+function SETTINGS_showPerf(){ return !!activeSettings.visuals.showPerf; }
 function SETTINGS_reducedFlashing(){ return activeSettings.accessibility.reducedFlashing; }
 function SETTINGS_playerLabels(){ return activeSettings.accessibility.alwaysShowPlayerLabels; }
 /* Practice-mode infinite health for a given fighter (dummy = the CPU side). */

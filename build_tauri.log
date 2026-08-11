@@ -1,0 +1,21 @@
+
+> what-just-hit-me@1.0.0 tauri
+> tauri build
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build:frontend`
+
+> what-just-hit-me@1.0.0 build:frontend
+> node scripts/build-frontend.js
+
+build-frontend: game client copied into dist/
+   Compiling what-just-hit-me v1.0.0 (C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri)
+    Finished `release` profile [optimized] target(s) in 2m 29s
+       Built application at: C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri\target\release\what-just-hit-me.exe
+        Info Patching C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri\target\release\what-just-hit-me.exe with bundle type information: nsis
+        Info Target: x64
+     Running makensis to produce C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri\target\release\bundle\nsis\What Just Hit Me_1.0.0_x64-setup.exe
+    Finished 1 bundle at:
+        C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri\target\release\bundle\nsis\What Just Hit Me_1.0.0_x64-setup.exe
+
+EXIT_CODE=0

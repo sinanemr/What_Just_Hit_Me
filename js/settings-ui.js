@@ -16,6 +16,8 @@ const ROUNDTIME_OPTS=[30,60,90,"unlimited"];
 const ROUNDTIME_LABELS={30:"30 Seconds",60:"60 Seconds",90:"90 Seconds",unlimited:"Unlimited (∞)"};
 const ROUNDS_LABELS={1:"1 — Single Round",2:"2 — Best of Three",3:"3 — Best of Five"};
 const HELPER_OPTS=["always","menus","off"]; const HELPER_LABELS={always:"Always",menus:"Menus Only",off:"Off"};
+const QUALITY_OPTS=["performance","balanced","quality","ultra"];
+const QUALITY_LABELS={performance:"Performance",balanced:"Balanced",quality:"Quality",ultra:"Ultra"};
 const P1_SLOTS=[["left","Move Left"],["right","Move Right"],["jump","Jump"],["block","Block"],["crouch","Crouch"],
   ["attack","Basic Attack"],["ab0","Ability 1"],["ab1","Ability 2"],["ab2","Ability 3"],["ultimate","Ultimate"]];
 
@@ -142,6 +144,8 @@ function renderSettings(){
   { const r=rowEl("Background Animation","Gulls, glitter, lighthouse glow (stage stays visible)"); r._ctl.appendChild(toggle(pendingSettings.visuals.backgroundAnimation,val=>{ pendingSettings.visuals.backgroundAnimation=val; markChanged(r,val!==activeSettings.visuals.backgroundAnimation); })); v.appendChild(r); }
   { const r=rowEl("Combat Text","Floating damage / status numbers"); r._ctl.appendChild(toggle(pendingSettings.visuals.combatText,val=>{ pendingSettings.visuals.combatText=val; markChanged(r,val!==activeSettings.visuals.combatText); })); v.appendChild(r); }
   { const r=rowEl("Control Helper"); r._ctl.appendChild(stepper(HELPER_OPTS,HELPER_LABELS,pendingSettings.visuals.controlHelper,val=>{ pendingSettings.visuals.controlHelper=val; markChanged(r,val!==activeSettings.visuals.controlHelper); })); v.appendChild(r); }
+  { const r=rowEl("Render Quality","Supersampling / resolution — lower is faster, higher is sharper"); r._ctl.appendChild(stepper(QUALITY_OPTS,QUALITY_LABELS,pendingSettings.visuals.renderQuality,val=>{ pendingSettings.visuals.renderQuality=val; markChanged(r,val!==activeSettings.visuals.renderQuality); })); v.appendChild(r); }
+  { const r=rowEl("Performance Overlay","Show FPS, main-thread CPU %, and resolution"); r._ctl.appendChild(toggle(pendingSettings.visuals.showPerf,val=>{ pendingSettings.visuals.showPerf=val; markChanged(r,val!==activeSettings.visuals.showPerf); })); v.appendChild(r); }
   // (Accessibility tab removed for now — the settings remain at their defaults in the model.)
   // PRACTICE ---------------------------------------------------------
   const pr=q("practice"); pr.innerHTML="";
