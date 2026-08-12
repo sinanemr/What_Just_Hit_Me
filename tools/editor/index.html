@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Just Hit Me — Hitbox Editor</title>
+<link rel="stylesheet" href="./editor.css">
+</head>
+<body>
+  <!-- Hidden game instance: the editor reads its real IMG_SPRITES / HITBOXES and draws with its loaded images. -->
+  <iframe id="game" src="/game/RUN_GAME.html" title="game" tabindex="-1"></iframe>
+
+  <header id="topbar">
+    <div class="brand">HITBOX&nbsp;<span>EDITOR</span></div>
+    <label class="field">Character
+      <select id="charSel"></select>
+    </label>
+    <label class="field">Animation
+      <select id="animSel"></select>
+    </label>
+    <div class="spacer"></div>
+    <button id="reloadBtn" class="btn ghost" title="Reload the game sprites">Reload</button>
+    <button id="exportBtn" class="btn ghost">Export JSON</button>
+    <button id="saveBtn" class="btn primary">Save to game</button>
+    <div id="status" class="status"></div>
+  </header>
+
+  <main id="main">
+    <section id="stage">
+      <div id="viewport"><canvas id="view"></canvas><div id="loading" class="loading">Loading game sprites…</div></div>
+
+      <div id="transport">
+        <button id="prevBtn" class="tbtn" title="Previous frame">◀</button>
+        <button id="playBtn" class="tbtn wide" title="Play / pause (Space)">▶ Play</button>
+        <button id="nextBtn" class="tbtn" title="Next frame">▶</button>
+        <span id="frameReadout" class="readout">frame — / —</span>
+        <span class="vsep"></span>
+        <span class="lbl">speed</span>
+        <span class="speedbtns">
+          <button class="sbtn" data-speed="0.5">0.5×</button>
+          <button class="sbtn on" data-speed="1">1×</button>
+          <button class="sbtn" data-speed="2">2×</button>
+        </span>
+        <span class="lbl">fps</span><input id="fps" type="number" min="1" max="60" step="1" value="10">
+        <label class="chk"><input id="onion" type="checkbox"> Onion skin</label>
+        <div class="spacer"></div>
+        <div id="strip" class="strip"></div>
+      </div>
+      <div class="zoomhint">scroll = zoom · drag = draw / move / resize · Space = play · ← → = step frame</div>
+    </section>
+
+    <aside id="side">
+      <div class="group">
+        <div class="grouphead">Character size <span id="csVal" class="pill">1.00×</span></div>
+        <input id="charScale" type="range" min="0.5" max="2" step="0.02" value="1" class="csslider">
+        <div class="csrow">
+          <input id="charScaleNum" type="number" min="0.3" max="3" step="0.05" value="1">
+          <button id="csReset" class="btn ghost">Reset</button>
+        </div>
+        <p class="hint">Scales every sprite of this character and its boxes together.</p>
+      </div>
+
+      <div class="group">
+        <div class="grouphead">Box kind</div>
+        <div class="segmented" id="kindSeg">
+          <button data-kind="hurt" class="seg on">Hurt</button>
+          <button data-kind="coll" class="seg">Collision</button>
+          <button data-kind="attack" class="seg">Attack</button>
+        </div>
+        <p class="hint" id="kindHint">Where this fighter can be hit (body).</p>
+      </div>
+
+      <div class="group">
+        <div class="grouphead">This frame <span id="boxState" class="pill">—</span></div>
+        <div class="grid4">
+          <label>X<input id="fx" type="number" step="1"></label>
+          <label>Y<input id="fy" type="number" step="1"></label>
+          <label>W<input id="fw" type="number" step="1"></label>
+          <label>H<input id="fh" type="number" step="1"></label>
+        </div>
+        <div id="attackWin" class="attackwin">
+          <label>Active from t0 <b id="t0v">0.00</b><input id="t0" type="range" min="0" max="0.8" step="0.02" value="0"></label>
+          <label>Active to&nbsp;&nbsp; t1 <b id="t1v">0.20</b><input id="t1" type="range" min="0" max="0.8" step="0.02" value="0.2"></label>
+        </div>
+        <div class="btnrow">
+          <button id="delBtn" class="btn danger" disabled>Delete</button>
+          <button id="applyAllBtn" class="btn ghost" disabled title="Copy this box to every frame of the animation">Apply all</button>
+        </div>
+        <div class="btnrow">
+          <button id="resetFrameBtn" class="btn ghost" title="Clear all boxes on this frame">Reset frame</button>
+          <button id="defBtn" class="btn ghost" disabled title="Use for any state that has no box of its own">Set default</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="grouphead">Sprite alignment <span class="pill" id="alignState">this frame</span></div>
+        <p class="hint">Nudge the art itself (what you used to hand-edit).</p>
+        <div class="grid4">
+          <label>dx<input id="adx" type="number" step="1"></label>
+          <label>foot<input id="afoot" type="number" step="1"></label>
+          <label>W<input id="aw" type="number" step="1"></label>
+          <label>H<input id="ah" type="number" step="1"></label>
+        </div>
+      </div>
+
+      <div class="group grow">
+        <div class="grouphead">Legend</div>
+        <ul class="legend">
+          <li><i style="background:#4ade80"></i> Hurt — can be hit</li>
+          <li><i style="background:#60a5fa"></i> Collision — body push</li>
+          <li><i style="background:#f87171"></i> Attack — deals a hit (active window)</li>
+        </ul>
+        <p class="hint">Frames with a coloured dot already have boxes. <b>Apply all</b> copies a box across the whole animation (great for the body hurt box). Save writes <code>characters/hitbox-data.js</code>.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script src="./editor.js"></script>
+</body>
+</html>

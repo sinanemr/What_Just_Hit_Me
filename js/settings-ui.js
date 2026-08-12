@@ -146,6 +146,7 @@ function renderSettings(){
   { const r=rowEl("Control Helper"); r._ctl.appendChild(stepper(HELPER_OPTS,HELPER_LABELS,pendingSettings.visuals.controlHelper,val=>{ pendingSettings.visuals.controlHelper=val; markChanged(r,val!==activeSettings.visuals.controlHelper); })); v.appendChild(r); }
   { const r=rowEl("Render Quality","Supersampling / resolution — lower is faster, higher is sharper"); r._ctl.appendChild(stepper(QUALITY_OPTS,QUALITY_LABELS,pendingSettings.visuals.renderQuality,val=>{ pendingSettings.visuals.renderQuality=val; markChanged(r,val!==activeSettings.visuals.renderQuality); })); v.appendChild(r); }
   { const r=rowEl("Performance Overlay","Show FPS, main-thread CPU %, and resolution"); r._ctl.appendChild(toggle(pendingSettings.visuals.showPerf,val=>{ pendingSettings.visuals.showPerf=val; markChanged(r,val!==activeSettings.visuals.showPerf); })); v.appendChild(r); }
+  { const r=rowEl("Hitbox Overlay (dev)","Draw authored hit / hurt / attack boxes on the fighters — also toggles with F1"); r._ctl.appendChild(toggle(pendingSettings.visuals.showHitboxes,val=>{ pendingSettings.visuals.showHitboxes=val; markChanged(r,val!==activeSettings.visuals.showHitboxes); })); v.appendChild(r); }
   // (Accessibility tab removed for now — the settings remain at their defaults in the model.)
   // PRACTICE ---------------------------------------------------------
   const pr=q("practice"); pr.innerHTML="";

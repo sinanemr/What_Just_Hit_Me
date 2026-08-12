@@ -101,6 +101,8 @@
 <script src="./js/controls.js"></script>
 <script src="./js/settings.js"></script>
 <script src="./js/engine.js"></script>
+<!-- visual hitbox/alignment data model + runtime helpers (Character Lab) -->
+<script src="./js/hitboxes.js"></script>
 <!-- stage hazards: roaming dog + right-side toilet event (need engine globals) -->
 <script src="./js/dog.js"></script>
 <script src="./js/toilet.js"></script>
@@ -178,6 +180,9 @@
 <script src="./characters/agron.js"></script>
 <script src="./characters/munevver.js"></script>
 <script src="./characters/warbringer.js"></script>
+<!-- authored hit/hurt/attack boxes + sprite alignment (written by tools/editor). Loads after all
+     characters so IMG_SPRITES + HITBOXES exist; applies boxes and alignment onto the registry. -->
+<script src="./characters/hitbox-data.js"></script>
 <!-- settings UI (needs engine globals; must load before main.js which wires the buttons) -->
 <script src="./js/settings-ui.js"></script>
 <!-- online play: production network config FIRST (single source of truth), then

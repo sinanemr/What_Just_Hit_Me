@@ -29,7 +29,8 @@ const DEFAULT_SETTINGS = {
     combatText: true,
     controlHelper: "always", // always | menus | off
     renderQuality: "quality",// performance | balanced | quality | ultra  (supersample / resolution)
-    showPerf: false          // FPS + main-thread CPU/frame-time overlay
+    showPerf: false,         // FPS + main-thread CPU/frame-time overlay
+    showHitboxes: false      // DEV: draw authored hit/hurt/attack boxes on the fighters (F1)
   },
   accessibility: {
     reduceMotion: false,
@@ -86,6 +87,7 @@ function validateSettings(s){
   s.visuals.controlHelper = oneOf(s.visuals.controlHelper,["always","menus","off"],"always");
   s.visuals.renderQuality = oneOf(s.visuals.renderQuality,["performance","balanced","quality","ultra"],"quality");
   s.visuals.showPerf = !!s.visuals.showPerf;
+  s.visuals.showHitboxes = !!s.visuals.showHitboxes;
   s.accessibility.reduceMotion = !!s.accessibility.reduceMotion;
   s.accessibility.reducedFlashing = !!s.accessibility.reducedFlashing;
   s.accessibility.largeMenuText = !!s.accessibility.largeMenuText;
@@ -130,6 +132,7 @@ const RENDER_QUALITY_PRESETS = {
 };
 function SETTINGS_renderQuality(){ return RENDER_QUALITY_PRESETS[activeSettings.visuals.renderQuality] || RENDER_QUALITY_PRESETS.quality; }
 function SETTINGS_showPerf(){ return !!activeSettings.visuals.showPerf; }
+function SETTINGS_showHitboxes(){ return !!activeSettings.visuals.showHitboxes; }
 function SETTINGS_reducedFlashing(){ return activeSettings.accessibility.reducedFlashing; }
 function SETTINGS_playerLabels(){ return activeSettings.accessibility.alwaysShowPlayerLabels; }
 /* Practice-mode infinite health for a given fighter (dummy = the CPU side). */

@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server/server.js",
     "build:frontend": "node scripts/build-frontend.js",
+    "editor": "node tools/editor/server.mjs",
     "tauri": "tauri"
   },
   "engines": {

@@ -942,7 +942,13 @@ function tryAttack(f){
  f.atkHit=((f._atkStep-1)%3+3)%3;   /* 3-hit combo index (0,1,2); hit 3 (=2) is the HEAVY */
  if(f.skillContext==="air"){f.atkHit=Math.min(f.airAtkN||0,2);f.airAtkN=(f.airAtkN||0)+1;}   /* AIR combo: own 1->2->3 counter */
  const _sid=onlineSessionId,_rid=onlineRoundId;   /* online: ignore this delayed hit if the round/session moved on */
- const hitDelay=(f.d.id==="satori"&&f.skillContext==="air"&&f.atkHit===2)?200:110;   /* air hit 3 has a wind-up, so the hit lands later (on the strike frame) */
+ /* Hit 3 (the heavy finisher) has a real wind-up, so land it ON the strike frame (atkNb / airatk3b)
+    rather than mid-wind-up — matches the sprite and the authored attack box (f.t≈dur*0.42, ÷gameSpeed). */
+ let hitDelay=110;
+ if(f.d.id==="satori"&&f.atkHit===2){
+  if(f.skillContext==="air")hitDelay=200;
+  else{const _dur=f.crouching?0.30:0.32;hitDelay=Math.round(_dur*0.42/0.8*1000)+10;}
+ }
  setTimeout(()=>{if(!running||onlineCallbackStale(_sid,_rid))return;
   if(misses(f))return;
   const foe=other(f),dx=foe.x-f.x;
@@ -959,7 +965,23 @@ function tryAttack(f){
    reach=(sctx==="crouch")?46:(fin?50:44);
    hH=(sctx==="crouch")?30:40;   /* crouch attacks hit lower */
   }
-  if(Math.abs(dx)<S(reach)&&dx*f.facing>-10&&Math.abs(foe.hurtY-f.centerY)<S(hH)){
+  /* CONNECT TEST: box-based when authored — sample the STRIKE frame's attack box (atkNb), not whatever
+     frame shows at this delayed instant (which is the wind-up atkNa), vs the foe's current hurt box.
+     Falls back to the legacy reach/vertical check whenever the boxes aren't authored. */
+  let connects;
+  { let atkBox=null;
+    if(typeof HITBOXES!=="undefined"&&HITBOXES[f.d.id]){
+     let key=f._frameKey;
+     if(sat){ const pre=(f.crouching&&f.onGround&&IMG_SPRITES.satori.catk1a)?"catk":"atk";
+      key=(f.skillContext==="air")?(hi===2?"airatk3b":"airatk"+(hi+1)):(pre+(hi+1)+"b"); }
+     const s=key&&HITBOXES[f.d.id][key]; if(s&&s.attack)atkBox=s.attack;
+    }
+    const foeHurt=(typeof hurtBoxFor==="function")?hurtBoxFor(foe.d.id,foe._frameKey):null;
+    connects=(atkBox&&foeHurt&&typeof boxToWorld==="function")
+      ? aabbOverlap(boxToWorld(f,atkBox),boxToWorld(foe,foeHurt))
+      : (Math.abs(dx)<S(reach)&&dx*f.facing>-10&&Math.abs(foe.hurtY-f.centerY)<S(hH));
+  }
+  if(connects){
    foe.takeDamage(dmg,kb,f.facing,{melee:true,noPop:necmi3||fin});
    addChi(f,5);
    if(typeof dogBuffOnHit==="function")dogBuffOnHit(f,foe);   /* dog-kill buff: bonus poison on basic hits */
@@ -2073,6 +2095,31 @@ function drawProps(g,f,t,attacking,special){
   g.fillStyle="#c8fff4";g.fillRect(fx===1?hx+3:hx-5,hy-1,2,2);}
  if(f.d.id==="munevver"&&special){g.fillStyle="#b36bff";g.fillRect(-1,-40,3,3);}
 }
+/* Reverse map a shown frame object -> its IMG_SPRITES key (cached per sprite set). Lets combat &
+   the hitbox overlay know which authored boxes apply to the fighter's currently-drawn frame. */
+const _revMaps=new WeakMap();
+function keyOf(set,fr){
+ if(!set||!fr)return null;
+ let m=_revMaps.get(set); const n=Object.keys(set).length;
+ if(!m||m._n!==n){ m=new Map(); for(const k in set){const v=set[k]; if(v&&typeof v==="object")m.set(v,k);} m._n=n; _revMaps.set(set,m); }
+ return m.get(fr)||null;
+}
+/* DEV: draw a fighter's authored hit/hurt/attack/collision boxes in world space (toggle in Visuals
+   settings or with F1). Uses the fighter's currently-shown frame (f._frameKey) with a default fallback. */
+function drawFighterBoxes(f){
+ if(typeof HITBOXES==="undefined"||typeof boxToWorld!=="function")return;
+ const key=f._frameKey, c=HITBOXES[f.d.id]; if(!c)return;
+ const own=(key&&c[key])||null, def=c.default||null;
+ const rectOf=(box,col,active)=>{ if(!box)return; const w=boxToWorld(f,box);
+  ctx.lineWidth=1.2; ctx.strokeStyle=col; ctx.fillStyle=col+(active?"26":"14");
+  ctx.fillRect(w.left,w.top,w.right-w.left,w.bottom-w.top);
+  ctx.strokeRect(w.left,w.top,w.right-w.left,w.bottom-w.top); };
+ rectOf((own&&own.coll)||(def&&def.coll),"#60a5fa",true);              /* collision (blue) */
+ rectOf((own&&own.hurt)||(def&&def.hurt),"#4ade80",true);              /* hurt (green) */
+ const ab=own&&own.attack; if(ab)rectOf(ab,"#f87171",(typeof boxActive==="function")&&boxActive(ab,f));   /* attack (red; brighter while active) */
+}
+/* F1 toggles the hitbox overlay live (dev convenience; the Visuals setting persists it). */
+window.addEventListener("keydown",e=>{ if(e.key==="F1"&&typeof activeSettings!=="undefined"&&activeSettings.visuals){ e.preventDefault(); activeSettings.visuals.showHitboxes=!activeSettings.visuals.showHitboxes; } },false);
 /* Draws one fighter for this frame: shadow, EXTRAS_BEHIND, the sprite itself (portrait art if available, else the procedural pixel-grid), EXTRAS on top, then any held-prop decoration. */
 function drawFighter(f,t){
  const attacking=f.state==="attack"&&f.t<.16;
@@ -2080,7 +2127,8 @@ function drawFighter(f,t){
  /* shadow */
  let shY=GROUND;
  for(const pl of platforms())if(f.x>pl.x-6&&f.x<pl.x+pl.w+6&&pl.y>=f.y-1&&pl.y<shY)shY=pl.y;
- ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(f.x,shY+2,S(14),S(3)+1,0,0,7);ctx.fill();
+ const _cs0=(typeof charScaleOf==="function")?charScaleOf(f.d.id):1;   /* per-character size -> proportional shadow */
+ ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(f.x,shY+2,S(14)*_cs0,S(3)*_cs0+1,0,0,7);ctx.fill();
  if(f.ultCharging){ctx.save();/* ULT CHARGE meter over his head — visible only while the button is held */
   const frac=Math.min(1,f.ultChargeT/2),full=frac>=1;
   const bw=32,bh=5,bx=Math.round(f.x-bw/2),by=Math.round(f.y)-62;
@@ -2098,7 +2146,8 @@ function drawFighter(f,t){
   const sx=1-wob*0.22, sy=1+wob*0.20;
   ctx.scale(sx,sy);ctx.translate((f._squashDir||1)*wob*3,0);
  }
- ctx.scale(CH_SCALE,CH_SCALE);   /* <-- everything below is authored in sprite px */
+ const _cs=(typeof charScaleOf==="function")?charScaleOf(f.d.id):1;   /* per-character SIZE multiplier (Hitbox Editor) */
+ ctx.scale(CH_SCALE*_cs,CH_SCALE*_cs);   /* <-- everything below is authored in sprite px */
  const imgSet=IMG_SPRITES[f.d.id];
  if(EXTRAS_BEHIND[f.d.id]&&f.alive){ctx.save();EXTRAS_BEHIND[f.d.id](ctx,f,t);ctx.restore();}
  if((!f.alive||f.koPose>0)&&!(imgSet&&imgSet.ko)){ctx.rotate(-f.facing*Math.PI/2);ctx.translate(-4,16);}   /* dead OR knocked-down (no KO art) -> lie on the ground */
@@ -2279,6 +2328,7 @@ function drawFighter(f,t){
    else fr=img.run;
   }
   if(!fr)fr=img.idle;   /* a state whose sprite isn't added yet (mid-update) falls back to idle */
+  f._frameKey=keyOf(img,fr);   /* remember which authored-box key this frame maps to (combat + overlay) */
   /* SATORI: soften transitions BETWEEN moves — when his state changes, briefly dissolve the previous
      pose out over the new one. In-animation frame swaps (run cycle, attack strikes) keep the same state,
      so they stay crisp. */
@@ -3179,6 +3229,7 @@ function renderGame(){
   if(aa&&ba)return (a.lastAction||0)<=(b.lastAction||0)?1:-1;   /* both acting -> earlier starter on top */
   return 0;                                            /* neither acting -> stable */
  }).forEach(f=>drawFighter(f,tGlobal));
+ if(typeof SETTINGS_showHitboxes==="function"&&SETTINGS_showHitboxes())for(const f of fighters)if(f.alive)drawFighterBoxes(f);
  if(typeof drawRegulatorGuy==="function")drawRegulatorGuy();   /* diver by the tanks (js/regulator.js) — FOREGROUND, in front of the fighters */
  if(typeof drawDog==="function")drawDog();          /* roaming dog hazard (js/dog.js) */
  if(typeof drawToilet==="function")drawToilet();    /* toilet + caretaker (js/toilet.js) */
