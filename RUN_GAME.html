@@ -180,6 +180,10 @@
 <script src="./characters/agron.js"></script>
 <script src="./characters/munevver.js"></script>
 <script src="./characters/warbringer.js"></script>
+<!-- sprite manifest: rebuilds IMG_SPRITES from assets/characters/<char>/anim/<animation>/ subfolders
+     (identical keys+metadata). Loads AFTER the character modules (overriding their inline sprites) and
+     BEFORE the preloader in main.js. -->
+<script src="./characters/sprite-manifest.js"></script>
 <!-- authored hit/hurt/attack boxes + sprite alignment (written by tools/editor). Loads after all
      characters so IMG_SPRITES + HITBOXES exist; applies boxes and alignment onto the registry. -->
 <script src="./characters/hitbox-data.js"></script>

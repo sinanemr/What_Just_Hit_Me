@@ -18,23 +18,7 @@
   ],
   ult:{n:"CODEX OF NUMERICAL ENIGMAS",d:"110 dmg (120 with bonus), DAMAGE DOWN 15% 4s, +45 Armor. After: Marks set to 2."}
  });
- IMG_SPRITES.munevver={
- run:{w:43,h:72,dx:3,src:"assets/characters/munevver/run.png"},
- idle:{w:43,h:72,dx:3,src:"assets/characters/munevver/run.png"},
- attack:{w:56,h:62,foot:-3,src:"assets/characters/munevver/attack.png"},
- attack2:{w:54,h:70,dx:-7,src:"assets/characters/munevver/attack2.png"},
- hit:{w:50,h:65,foot:-2,dx:2,src:"assets/characters/munevver/hit.png"},
- block:{w:42,h:69,dx:3,src:"assets/characters/munevver/block.png"},
- crouch:{w:45,h:53,foot:1,src:"assets/characters/munevver/crouch.png"},
- jump:{w:67,h:70,foot:-2,dx:-1,src:"assets/characters/munevver/jump.png"},
- ko:{w:70,h:34,foot:2,src:"assets/characters/munevver/ko.png"},
- skillA:{w:63,h:66,foot:-8,dx:3,src:"assets/characters/munevver/skillA.png"},
- skillA2:{w:77,h:59,foot:-8,dx:3,src:"assets/characters/munevver/skillA2.png"},
- skillB:{w:60,h:67,foot:-3,dx:5,src:"assets/characters/munevver/skillB.png"},
- skillC:{w:76,h:68,foot:-1,src:"assets/characters/munevver/skillC.png"},
- ult1:{w:63,h:70,foot:3,dx:7,src:"assets/characters/munevver/ult1.png"},
- ult2:{w:100,h:95,foot:3,dx:2,src:"assets/characters/munevver/ult2.png"}
-};
+ IMG_SPRITES.munevver={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  SPRITES.munevver={pal:{p:"#20263e",P:"#141829",c:"#f2b632",a:"#b36bff",h:"#1a1a22",s:"#e6c3a0",r:"#b0384a",e:"#231a10",k:"#241a2e"},g:[
 "......hhhh......",
 ".....hhhhhh.....",

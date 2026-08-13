@@ -10,7 +10,7 @@
 
 build-frontend: game client copied into dist/
    Compiling what-just-hit-me v1.0.0 (C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri)
-    Finished `release` profile [optimized] target(s) in 1m 50s
+    Finished `release` profile [optimized] target(s) in 4m 37s
        Built application at: C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri\target\release\what-just-hit-me.exe
         Info Patching C:\Users\semre\Documents\Mincik Game\What_Just_Hit_Me\src-tauri\target\release\what-just-hit-me.exe with bundle type information: nsis
         Info Target: x64

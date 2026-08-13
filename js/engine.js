@@ -47,6 +47,10 @@ const WALL_L=CFG.world.leftWall, WALL_R=CFG.world.rightWall;
 const SPAWN_1=CFG.fighters.player1Spawn, SPAWN_2=CFG.fighters.player2Spawn;
 let camX=(WORLD_W-W)/2;      /* left edge of the viewport, in world px */
 let camScale=1;              /* camera zoom: 1 = normal; <1 = pulled back when fighters are far apart */
+let TOOL_CLEAN=false;        /* Hitbox Editor "Stats & Test": plain arena — no stage backdrop / decor / props */
+const TOOL_CAM_ZOOM=2.8;     /* fixed closer camera for the test arena (bigger characters, editor-like view) */
+const TOOL_CAM_YOFF=0;       /* taller viewport already provides jump headroom; no extra shift (was cutting the legs) */
+const DUMMY_HURT={x:-15,y:0,w:30,h:70};   /* the practice dummy's hurt box (also drawn in the overlay) */
 const camClamp=v=>Math.max(0,Math.min(WORLD_W-W,v));
 const S=v=>v*CH_SCALE;                       /* sprite px -> world px */
 const MZX=(f,ox)=>f.x+f.facing*S(ox);        /* muzzle X from sprite offset */
@@ -189,9 +193,9 @@ const IMG_SPRITES={};
   ult:{n:"FLAME SPIRAL",d:"Flaming uppercut into 5×22 burning kicks. Consumes all Heat: +20 dmg at 50-79, +40 at 80-99. BURN 4s. Never overheats."}
  });
  IMG_SPRITES.ember={
- idle:{w:40,h:72,src:"assets/characters/emberstrike/idle.png"},
- attack:{w:52,h:64,src:"assets/characters/emberstrike/attack.png"},
- hit:{w:39,h:63,src:"assets/characters/emberstrike/hit.png"}
+ idle:{w:40,h:72,src:"assets/characters/ember/idle/idle.png"},
+ attack:{w:52,h:64,src:"assets/characters/ember/attack/attack.png"},
+ hit:{w:39,h:63,src:"assets/characters/ember/hit/hit.png"}
 };
  SPRITES.ember={pal:{p:"#c2331f",P:"#8e2113",c:"#f28022",g:"#ffd23f",s:"#e0a878",h:"#f28022",e:"#301008",k:"#5c1408"},g:[
 "......hhhh......",
@@ -251,9 +255,9 @@ const IMG_SPRITES={};
   ult:{n:"ZEN STATE",d:"90 dmg chi shockwave + 1s stun, Chi fills to 100. For 6s: +20% dmg, 20% resistance, empowered palms, Chi frozen. Ends with Chi at 0."}
  });
  IMG_SPRITES.akira={
- idle:{w:33,h:72,src:"assets/characters/akira/idle.png"},
- attack:{w:52,h:66,src:"assets/characters/akira/attack.png"},
- hit:{w:33,h:76,src:"assets/characters/akira/hit.png"}
+ idle:{w:33,h:72,src:"assets/characters/akira/idle/idle.png"},
+ attack:{w:52,h:66,src:"assets/characters/akira/attack/attack.png"},
+ hit:{w:33,h:76,src:"assets/characters/akira/hit/hit.png"}
 };
  SPRITES.akira={pal:{p:"#e8e2d4",P:"#c6bda8",c:"#8a2f2f",h:"#cfcfcf",s:"#e3c096",e:"#241a10",k:"#6b4a2b"},g:[
 ".......hh.......",
@@ -342,7 +346,7 @@ addEventListener("keydown",e=>{
   if(typeof ONLINE!=="undefined"&&(ONLINE.mode==="match-host"||ONLINE.mode==="match-guest")){
    e.preventDefault(); if(typeof ONLINE_toggleMatchMenu==="function")ONLINE_toggleMatchMenu(); return;
   }
-  if(running&&!roundOver&&document.getElementById("fight").classList.contains("active")){e.preventDefault();togglePause();}
+  if(!TOOL_CLEAN&&running&&!roundOver&&document.getElementById("fight").classList.contains("active")){e.preventDefault();togglePause();}
   return;
  }
  keys[e.key.toLowerCase()]=true; if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase()))e.preventDefault();});
@@ -375,7 +379,7 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 /* =============== STAGE OBJECTS =============== */
 let plats=[];
 /* Live platform/scaffold list for the current round (read by physics, AI, and collision). */
-function platforms(){return plats.concat(propWalkPlatforms(), staticWalkPlatforms()).sort((a,b)=>a.y-b.y);}
+function platforms(){if(TOOL_CLEAN)return [];return plats.concat(propWalkPlatforms(), staticWalkPlatforms()).sort((a,b)=>a.y-b.y);}
 function makePlats(sid){
  /* Obstacles/scaffolding cleared for now — flat stage; fighters use the ground line. */
  return[];
@@ -574,6 +578,7 @@ class Fighter{
    if(att.d.id==="ember")dmg*=(att.heat>=80?1.2:att.heat>=50?1.15:1);
    if(att.d.id==="notalk"&&opts.melee&&!opts.noStackMult)dmg*=(1+.07*att.strStacks);
    if(att.d.id==="agron"&&att.frenzy>0&&!opts.skill)dmg+=5;      /* BLOOD FRENZY */
+   if(opts.skill&&typeof skillDmgMultOf==="function")dmg*=skillDmgMultOf(att.d.id);   /* tool: per-character skill-damage tuning */
    if(att.d.id==="akira"&&opts.skill&&att.chi>=50)dmg*=1.1;
    if(att.zen>0)dmg*=1.2;
    if(att.surge>0)dmg*=1.4;
@@ -949,6 +954,12 @@ function tryAttack(f){
   if(f.skillContext==="air")hitDelay=200;
   else{const _dur=f.crouching?0.30:0.32;hitDelay=Math.round(_dur*0.42/0.8*1000)+10;}
  }
+ /* if this attack animation was retimed in the editor, move the hit with it (faster anim -> sooner hit) */
+ if(f.d.id==="satori"&&typeof animTScaleOf==="function"){
+  const _hi=f.atkHit||0,_pre=(f.crouching&&f.onGround&&IMG_SPRITES.satori.catk1a)?"catk":"atk";
+  const _sk=(f.skillContext==="air")?(_hi===2?"airatk3b":"airatk"+(_hi+1)):(_pre+(_hi+1)+"b");
+  const _ts=animTScaleOf("satori",_sk); if(_ts>0)hitDelay=Math.round(hitDelay/_ts);
+ }
  setTimeout(()=>{if(!running||onlineCallbackStale(_sid,_rid))return;
   if(misses(f))return;
   const foe=other(f),dx=foe.x-f.x;
@@ -976,7 +987,7 @@ function tryAttack(f){
       key=(f.skillContext==="air")?(hi===2?"airatk3b":"airatk"+(hi+1)):(pre+(hi+1)+"b"); }
      const s=key&&HITBOXES[f.d.id][key]; if(s&&s.attack)atkBox=s.attack;
     }
-    const foeHurt=(typeof hurtBoxFor==="function")?hurtBoxFor(foe.d.id,foe._frameKey):null;
+    const foeHurt=foe._toolDummy?DUMMY_HURT:((typeof hurtBoxFor==="function")?hurtBoxFor(foe.d.id,foe._frameKey):null);
     connects=(atkBox&&foeHurt&&typeof boxToWorld==="function")
       ? aabbOverlap(boxToWorld(f,atkBox),boxToWorld(foe,foeHurt))
       : (Math.abs(dx)<S(reach)&&dx*f.facing>-10&&Math.abs(foe.hurtY-f.centerY)<S(hH));
@@ -1314,7 +1325,7 @@ function updateFighter(f,dt){
   f.armor=Math.min(f.maxArmor,f.armor+10*dt);}
  if(f.d.id==="akira"&&f.zen<=0&&tGlobal-f.lastAction>4&&f.chi>0){f.chi=Math.max(0,f.chi-8*dt);}
  if(f.d.id==="haydar"&&f.alive){f._rg=(f._rg||0)+dt;if(f._rg>1){f._rg=0;f.hp=Math.min(f.maxhp,f.hp+4);}}
- f.t+=dt;
+ f.t+=dt*((typeof animTScaleOf==="function")?animTScaleOf(f.d.id,f._frameKey):1);   /* per-animation SPEED (Hitbox Editor fps); 1 = unchanged */
  if(!f.onGround){if(f.airSkillT>0)f.airSkillT-=dt;}else f.airSkillT=0;   /* air-skill window ticks down while airborne, clears on landing */
  f.crouchT=f.crouching?(f.crouchT||0)+dt:0;   /* time spent crouching -> drives the down-into-crouch animation */
  f.downT=(!f.alive||f.koPose>0)?(f.downT||0)+dt:0;   /* time knocked down OR KO'd -> drives the ko -> ko2 sequence */
@@ -1719,13 +1730,17 @@ function updateFx(dt){
 function startRound(){
  onlineRoundId++;   /* bump the online round epoch so stale delayed callbacks are ignored */
  projectiles=[];particles=[];floaters=[];rings=[];codexes=[];groundFx=[];ghosts=[];sawCuts=[];
- if(typeof resetDog==="function")resetDog();   /* clear the roaming dog + kill-buffs each round */
- if(typeof resetToilet==="function")resetToilet();   /* reset the toilet event each round */
- if(typeof resetCars==="function")resetCars();   /* reset the car explosion event each round */
- props=makeProps(stageId);
- plats=makePlats(stageId);
- fighters[0].resetRound(SPAWN_1,1);fighters[1].resetRound(SPAWN_2,-1);
- camX=camClamp((SPAWN_1+SPAWN_2)/2-W/2);camScale=1;   /* recentre + reset zoom each round */
+ if(!TOOL_CLEAN){   /* test arena: no stage hazards, props, or platforms exist at all */
+  if(typeof resetDog==="function")resetDog();   /* clear the roaming dog + kill-buffs each round */
+  if(typeof resetToilet==="function")resetToilet();   /* reset the toilet event each round */
+  if(typeof resetCars==="function")resetCars();   /* reset the car explosion event each round */
+ }
+ props=TOOL_CLEAN?[]:makeProps(stageId);
+ plats=TOOL_CLEAN?[]:makePlats(stageId);
+ const _mid=(SPAWN_1+SPAWN_2)/2;
+ const _s1=TOOL_CLEAN?_mid-58:SPAWN_1, _s2=TOOL_CLEAN?_mid+58:SPAWN_2;   /* test arena: spawn close so the dummy stays in the P1-locked view */
+ fighters[0].resetRound(_s1,1);fighters[1].resetRound(_s2,-1);
+ camX=camClamp((_s1+_s2)/2-W/2);camScale=TOOL_CLEAN?TOOL_CAM_ZOOM:1;   /* recentre + reset zoom each round */
  timer=matchRoundTime;roundOver=false;paused=false;
  document.getElementById("pauseMenu").classList.remove("show");
  roundAnnounce("ROUND "+roundNum,1000);
@@ -1827,6 +1842,15 @@ function drawBgMotion(t){
 
 /* Draws the full-screen stage backdrop for this frame: the background painting (or a gradient fallback), the ambient background-life motion, and small atmosphere details (gulls, lighthouse glow, water glitter). */
 function drawStage(t){
+ if(TOOL_CLEAN){   /* plain test arena (matches the editor viewport): flat dark bg + ground line + faint grid */
+  ctx.fillStyle="#0d0b18";ctx.fillRect(-2000,-3000,WORLD_W+4000,4000+H);
+  ctx.strokeStyle="rgba(120,110,170,0.08)";ctx.lineWidth=1;ctx.beginPath();
+  for(let gy=GROUND-360;gy<GROUND;gy+=40){ctx.moveTo(-2000,gy);ctx.lineTo(WORLD_W+2000,gy);}
+  for(let gx=Math.round(camX/40)*40-80;gx<camX+W/camScale+80;gx+=40){ctx.moveTo(gx,GROUND-380);ctx.lineTo(gx,GROUND+30);}
+  ctx.stroke();
+  ctx.strokeStyle="rgba(200,190,240,0.28)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-2000,GROUND);ctx.lineTo(WORLD_W+2000,GROUND);ctx.stroke();
+  return;
+ }
  if(STAGE_BG_OK){
   /* Backdrop drawn in WORLD space so it scales uniformly with the fighters under the
      camera zoom — no stretch, and no size change relative to the fighters. The painting
@@ -2104,10 +2128,26 @@ function keyOf(set,fr){
  if(!m||m._n!==n){ m=new Map(); for(const k in set){const v=set[k]; if(v&&typeof v==="object")m.set(v,k);} m._n=n; _revMaps.set(set,m); }
  return m.get(fr)||null;
 }
+/* A simple training dummy (drawn instead of a character sprite for the practice-arena opponent).
+   sprite-px space: feet at origin, +y is DOWN, so the body goes to negative y. */
+function drawTrainingDummy(g){
+ g.fillStyle="#241a10";g.beginPath();g.ellipse(0,-2,15,5,0,0,7);g.fill();          /* base */
+ g.fillStyle="#5a4126";g.fillRect(-3,-66,6,66);                                    /* post */
+ g.fillStyle="#caa46a";g.beginPath();g.roundRect(-16,-62,32,44,9);g.fill();        /* body bag */
+ g.strokeStyle="#7c5a30";g.lineWidth=1.5;g.beginPath();g.roundRect(-16,-62,32,44,9);g.stroke();
+ g.fillStyle="#7c5a30";g.fillRect(-16,-50,32,3);g.fillRect(-16,-36,32,3);          /* straps */
+ g.fillStyle="#d8b578";g.beginPath();g.arc(0,-70,9,0,7);g.fill();                  /* head knob */
+ g.strokeStyle="#7c5a30";g.beginPath();g.arc(0,-70,9,0,7);g.stroke();
+}
 /* DEV: draw a fighter's authored hit/hurt/attack/collision boxes in world space (toggle in Visuals
    settings or with F1). Uses the fighter's currently-shown frame (f._frameKey) with a default fallback. */
 function drawFighterBoxes(f){
- if(typeof HITBOXES==="undefined"||typeof boxToWorld!=="function")return;
+ if(typeof boxToWorld!=="function")return;
+ if(f._toolDummy){   /* the dummy has a fixed hurt box */
+  const w=boxToWorld(f,DUMMY_HURT);ctx.lineWidth=1.2;ctx.strokeStyle="#4ade80";ctx.fillStyle="#4ade8022";
+  ctx.fillRect(w.left,w.top,w.right-w.left,w.bottom-w.top);ctx.strokeRect(w.left,w.top,w.right-w.left,w.bottom-w.top);return;
+ }
+ if(typeof HITBOXES==="undefined")return;
  const key=f._frameKey, c=HITBOXES[f.d.id]; if(!c)return;
  const own=(key&&c[key])||null, def=c.default||null;
  const rectOf=(box,col,active)=>{ if(!box)return; const w=boxToWorld(f,box);
@@ -2148,6 +2188,7 @@ function drawFighter(f,t){
  }
  const _cs=(typeof charScaleOf==="function")?charScaleOf(f.d.id):1;   /* per-character SIZE multiplier (Hitbox Editor) */
  ctx.scale(CH_SCALE*_cs,CH_SCALE*_cs);   /* <-- everything below is authored in sprite px */
+ if(f._toolDummy&&TOOL_CLEAN){drawTrainingDummy(ctx);ctx.restore();return;}   /* practice dummy, not a character sprite */
  const imgSet=IMG_SPRITES[f.d.id];
  if(EXTRAS_BEHIND[f.d.id]&&f.alive){ctx.save();EXTRAS_BEHIND[f.d.id](ctx,f,t);ctx.restore();}
  if((!f.alive||f.koPose>0)&&!(imgSet&&imgSet.ko)){ctx.rotate(-f.facing*Math.PI/2);ctx.translate(-4,16);}   /* dead OR knocked-down (no KO art) -> lie on the ground */
@@ -3104,7 +3145,7 @@ let lastT=0;
    online host, never on the online guest (which renders host snapshots instead). */
 function updateSimulation(dt){
  tGlobal+=dt;
- if(!roundOver&&Number.isFinite(timer)){timer-=dt;if(timer<=0)timeoutRound();}
+ if(!TOOL_CLEAN&&!roundOver&&Number.isFinite(timer)){timer-=dt;if(timer<=0)timeoutRound();}   /* test arena: no round timer */
  for(const f of fighters){readInput(f,dt);updateFighter(f,dt);}
  resolveFighterCollision();
  /* face each other when idle */
@@ -3116,21 +3157,29 @@ function updateSimulation(dt){
  for(let i=ghosts.length-1;i>=0;i--){ghosts[i].t+=dt;if(ghosts[i].t>=ghosts[i].life)ghosts.splice(i,1);}   /* advance + cull afterimages */
  {const sawActive=projectiles.some(p=>p.saw);   /* keep the whole gash while the saw is still rolling; fade it only once the saw is gone */
   for(let i=sawCuts.length-1;i>=0;i--){if(!sawActive)sawCuts[i].t+=dt;if(sawCuts[i].t>=sawCuts[i].life)sawCuts.splice(i,1);}}
+ if(!TOOL_CLEAN){   /* test arena: no stage hazards run */
  if(typeof updateDog==="function")updateDog(dt);   /* roaming dog hazard (js/dog.js) */
  if(typeof updateToilet==="function")updateToilet(dt);   /* right-side toilet event (js/toilet.js) */
  if(typeof updateCars==="function")updateCars(dt);   /* left-side car explosion event (js/cars.js) */
  if(typeof updateCarProp==="function")updateCarProp(dt);   /* burning-wreck fire hazard (js/car.js) */
+ }
  /* ---- camera: follow the pair; slowly pull back (zoom out) when they're far apart ---- */
  {const[a,b]=fighters;
-  const gap=Math.abs(a.x-b.x), margin=140;
-  let tz=W/(gap+margin*2);                                   /* zoom needed to fit both fighters + margins */
-  tz=Math.max(W/WORLD_W,Math.min(1,tz));                     /* never zoom past showing the whole stage */
-  camScale+=(tz-camScale)*Math.min(1,dt*2.5);               /* ease the zoom smoothly (crawl-free via the offscreen world buffer in renderGame) */
-  const camW=W/camScale;                                    /* visible world width */
-  const mid=(a.x+b.x)/2, hi=Math.max(0,WORLD_W-camW);
-  const want=Math.max(0,Math.min(hi,mid-camW/2));
-  camX+=(want-camX)*Math.min(1,dt*CFG.camera.followSpeed);
-  camX=Math.max(0,Math.min(hi,camX));}
+  if(TOOL_CLEAN){   /* test arena: fixed zoom, camera LOCKED on the player (P1) */
+   const tz=TOOL_CAM_ZOOM, camW=W/tz;
+   camScale+=(tz-camScale)*Math.min(1,dt*5);
+   camX+=((a.x-camW/2)-camX)*Math.min(1,dt*7);
+  }else{
+   const gap=Math.abs(a.x-b.x), margin=140;
+   let tz=W/(gap+margin*2);                                   /* zoom needed to fit both fighters + margins */
+   tz=Math.max(W/WORLD_W,Math.min(1,tz));                     /* never zoom past showing the whole stage */
+   camScale+=(tz-camScale)*Math.min(1,dt*2.5);               /* ease the zoom smoothly (crawl-free via the offscreen world buffer in renderGame) */
+   const camW=W/camScale;                                    /* visible world width */
+   const mid=(a.x+b.x)/2, hi=Math.max(0,WORLD_W-camW);
+   const want=Math.max(0,Math.min(hi,mid-camW/2));
+   camX+=(want-camX)*Math.min(1,dt*CFG.camera.followSpeed);
+   camX=Math.max(0,Math.min(hi,camX));
+  }}
 }
 /* Offscreen buffer the WORLD is rendered into at a CONSTANT scale (RENDER_SCALE, no zoom),
    so every layer is pixel-stable frame to frame. renderGame then does ONE smooth scale of this
@@ -3166,7 +3215,7 @@ function renderGame(){
     (visW*visH*bden^2 is invariant) -> no fps cliff on zoom-out, and no visible quality loss since the
     on-screen sampling density (s*dpx) is matched exactly (x SSAA). */
  const bden=Math.max(1,Math.min(dsat, dpx*s*_ssaa));
- const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD;     /* top-left of the (padded) visible world region */
+ const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD-(TOOL_CLEAN?TOOL_CAM_YOFF:0);     /* top-left of the (padded) visible world region (test arena raises the framing for jump headroom) */
  const visW=W/s+CAM_PAD*2, visH=H/s+CAM_PAD*2;
  const buf=worldBuffer(dsat), b=_worldCtx;
  const sw=Math.min(buf.width,  visW*bden), sh=Math.min(buf.height, visH*bden);
@@ -3184,6 +3233,7 @@ function renderGame(){
  b.imageSmoothingEnabled=false;            /* match the old main-canvas default; hi-res sprites + backdrop opt into smoothing themselves */
  const _prevCtx=ctx; ctx=b;                /* redirect every world-draw below into the buffer */
  drawStage(tGlobal);                       /* backdrop now scales WITH the fighters (one uniform zoom) */
+ if(!TOOL_CLEAN){   /* Stats&Test clean arena: skip all stage decor + platforms */
  if(typeof drawWaves==="function")drawWaves();      /* subtle water shimmer on the sea (js/waves.js) */
  if(typeof drawBirds==="function")drawBirds();      /* ambient seagulls in the sky (js/birds.js) — behind everything */
  if(typeof drawShark==="function")drawShark();      /* shark fin in the distant sea (js/shark.js) — behind everything */
@@ -3214,6 +3264,7 @@ function renderGame(){
  if(typeof drawScaffold==="function")drawScaffold();
  drawStageObjects(tGlobal);
  if(typeof drawIronboxes==="function")drawIronboxes();   /* ironboxes on/around the scaffolds (js/ironbox.js) — after scaffolds, behind fighters */
+ }   /* end clean-arena decor gate */
  drawGroundFx();   /* double-jump energy stays at the take-off point, behind the fighters */
  drawGhosts();     /* dash afterimages, behind the fighters */
  drawSawCuts();    /* glowing-red ground gash from the crouch-A saw */
@@ -3229,7 +3280,8 @@ function renderGame(){
   if(aa&&ba)return (a.lastAction||0)<=(b.lastAction||0)?1:-1;   /* both acting -> earlier starter on top */
   return 0;                                            /* neither acting -> stable */
  }).forEach(f=>drawFighter(f,tGlobal));
- if(typeof SETTINGS_showHitboxes==="function"&&SETTINGS_showHitboxes())for(const f of fighters)if(f.alive)drawFighterBoxes(f);
+ if(TOOL_CLEAN||(typeof SETTINGS_showHitboxes==="function"&&SETTINGS_showHitboxes()))for(const f of fighters)if(f.alive)drawFighterBoxes(f);   /* boxes always on in the test arena */
+ if(!TOOL_CLEAN){   /* clean arena: skip foreground decor / hazards */
  if(typeof drawRegulatorGuy==="function")drawRegulatorGuy();   /* diver by the tanks (js/regulator.js) — FOREGROUND, in front of the fighters */
  if(typeof drawDog==="function")drawDog();          /* roaming dog hazard (js/dog.js) */
  if(typeof drawToilet==="function")drawToilet();    /* toilet + caretaker (js/toilet.js) */
@@ -3237,6 +3289,7 @@ function renderGame(){
  if(typeof drawScubaGlassesFront==="function")drawScubaGlassesFront();   /* 2 masks next to the CO2 tank (js/scubaglasses.js) — foreground */
  if(typeof drawRegulatorGuy==="function")drawRegulatorGuy();   /* diver by the tanks (js/regulator.js) — FOREGROUND, in front of the fighters */
  if(typeof drawCradleFore==="function")drawCradleFore();   /* crate next to the regulator (js/plasticcradle.js) — foreground */
+ }   /* end clean-arena foreground gate */
  drawProjectiles();drawCodexes(tGlobal);drawFx();
  ctx=_prevCtx;                             /* world done — back to the real canvas */
  /* ---- composite: one smooth scale of the whole world buffer onto the screen (+ screen shake) ---- */
@@ -3246,7 +3299,7 @@ function renderGame(){
  ctxMain.imageSmoothingEnabled=true;ctxMain.imageSmoothingQuality="low";   /* bilinear: the down-scale is only ~1/SSAA, so cheap & indistinguishable from "high" here */
  ctxMain.drawImage(buf, 0,0,sw,sh,  s*(-CAM_PAD-fracX)+ox, s*(-CAM_PAD-fracY)+oy, visW*s, visH*s);
  ctxMain.imageSmoothingEnabled=false;
- ctx=ctxMain;drawHUD();                    /* HUD stays screen-fixed, crisp, at device resolution */
+ ctx=ctxMain;if(!TOOL_CLEAN)drawHUD();     /* HUD stays screen-fixed, crisp; hidden in the bare test arena */
  if(typeof SETTINGS_showPerf==="function"&&SETTINGS_showPerf())drawPerfOverlay(dpx,bden,s);
  ctxMain.setTransform(1,0,0,1,0,0);
 }
@@ -3462,6 +3515,21 @@ function beginMatch(){
  lastT=performance.now();requestAnimationFrame(loop);
 }
 document.getElementById("fightBtn").addEventListener("click",beginMatch);
+/* Hitbox Editor "Stats & Test": start a playable practice fight with the chosen character vs a dummy,
+   after applying any stat overrides. Called from the tool via the game iframe. */
+function TOOL_startPractice(charId,oppId){
+ if(typeof applyCharStats==="function")applyCharStats();
+ if(!CHARS.some(c=>c.id===charId))return false;
+ TOOL_CLEAN=true;   /* plain arena — no stage / decor / menu */
+ for(const id of ["fightCtrlHelp","announce"]){const el=document.getElementById(id);if(el)el.style.display="none";}   /* hide the control strip + round banner */
+ p1Pick=charId; p2Pick=(oppId&&CHARS.some(c=>c.id===oppId))?oppId:charId; cpuMode=true; cpuDiff=3;
+ if(typeof activeSettings!=="undefined"){activeSettings.match.cpuDifficulty=3;activeSettings.match.pauseOnFocusLoss=false;
+  activeSettings.practice.dummyBehavior="stand";activeSettings.practice.playerHealth="infinite";activeSettings.practice.dummyHealth="infinite";}   /* persistent sandbox */
+ const ds=document.getElementById("diffSel"); if(ds)ds.value="3";
+ beginMatch();
+ if(fighters[1]){fighters[1]._toolDummy=true;fighters[1]._frameKey=null;}   /* P2 = a plain practice dummy, not a character */
+ return true;
+}
 document.getElementById("rematchBtn").addEventListener("click",()=>{
  document.getElementById("postFight").classList.remove("show");
  if(typeof SETTINGS_roundTime==="function"){matchRoundTime=SETTINGS_roundTime();matchWinsRequired=SETTINGS_roundsToWin();}
@@ -3478,7 +3546,7 @@ function showPauseMain(){
 }
 /* Freezes the game loop and shows the pause menu (also releases any held input keys so nothing stays 'stuck' pressed). */
 function pauseGame(){
- if(paused||!running||roundOver)return;
+ if(TOOL_CLEAN||paused||!running||roundOver)return;   /* no pause menu in the test arena */
  paused=true;
  /* clear held keys so nothing is "stuck" pressed while frozen */
  for(const k in keys)keys[k]=false;

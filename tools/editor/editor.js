@@ -15,7 +15,8 @@ const G = {
   win: null, IMG: null, chars: [], char: null,
   anims: [], anim: null, frameIdx: 0,
   kind: "hurt",
-  data: { hitboxes: {}, spriteAlign: {}, charScale: {} },
+  data: { hitboxes: {}, spriteAlign: {}, charScale: {}, animFps: {}, charAnimSpeed: {}, animTScale: {}, charStats: {} },
+  charDefaults: {},
   view: { z: 3.6, cx: 0, fy: 0 },
   drag: null, dpr: 1,
   playing: false, speed: 1, fps: 10, onion: false, _acc: 0, _last: 0
@@ -40,16 +41,28 @@ function boot() {
   frame.addEventListener("load", tryInit); tryInit();
 }
 function init(w, IMG) {
+  const first = !G.win, prevChar = G.char;   // preserve selection if init re-runs on a second iframe load
   G.win = w; G.IMG = IMG;
   const HB = gEval("typeof HITBOXES!=='undefined' ? HITBOXES : {}") || {};
   const SA = gEval("typeof SPRITE_ALIGN!=='undefined' ? SPRITE_ALIGN : {}") || {};
   const CS = gEval("typeof CHAR_SCALE!=='undefined' ? CHAR_SCALE : {}") || {};
+  const AS = gEval("typeof CHAR_ANIM_SPEED!=='undefined' ? CHAR_ANIM_SPEED : {}") || {};
+  const AF = gEval("typeof ANIM_FPS!=='undefined' ? ANIM_FPS : {}") || {};
   try { G.data.hitboxes = JSON.parse(JSON.stringify(HB)); } catch (e) { G.data.hitboxes = {}; }
   try { G.data.spriteAlign = JSON.parse(JSON.stringify(SA)); } catch (e) { G.data.spriteAlign = {}; }
   try { G.data.charScale = JSON.parse(JSON.stringify(CS)); } catch (e) { G.data.charScale = {}; }
+  try { G.data.charAnimSpeed = JSON.parse(JSON.stringify(AS)); } catch (e) { G.data.charAnimSpeed = {}; }
+  try { G.data.animFps = JSON.parse(JSON.stringify(AF)); } catch (e) { G.data.animFps = {}; }
+  const ST = gEval("typeof CHAR_STATS!=='undefined' ? CHAR_STATS : {}") || {};
+  try { G.data.charStats = JSON.parse(JSON.stringify(ST)); } catch (e) { G.data.charStats = {}; }
+  // the characters' ORIGINAL stats (for the "def" hints + Reset) — from _CHAR_STATS_ORIG if applied, else current CHARS
+  G.charDefaults = gEval("(function(){ if(typeof CHARS==='undefined')return{}; var o={},g=(typeof _CHAR_STATS_ORIG!=='undefined'&&_CHAR_STATS_ORIG)||null; for(var i=0;i<CHARS.length;i++){var c=CHARS[i],s=g&&g[c.id]; o[c.id]=s?{hp:s.hp,armor:s.armor,speed:s.speed,jump:s.jump,power:s.power}:{hp:c.hp,armor:c.armor,speed:c.speed,jump:c.jump,power:c.power};} return o; })()") || {};
   buildCharList();
+  if (prevChar && G.chars.includes(prevChar)) { G.char = prevChar; $("charSel").value = prevChar; buildAnimList(); }
+  syncStats();
   $("loading").style.display = "none";
-  requestAnimationFrame(tick);
+  if (first) requestAnimationFrame(tick);   // don't stack a second render loop on re-init
+  primeArena();                             // leave the title menu immediately -> frozen clean arena
 }
 
 /* ---------------- animation grouping ---------------- */
@@ -81,16 +94,70 @@ function buildCharList() {
   for (const c of G.chars) { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); }
   G.char = G.chars[0]; sel.value = G.char; buildAnimList();
 }
+/* Friendly display names for the code prefixes (falls back to a prettified version of the raw key). */
+const ANIM_LABELS = {
+  idle: "Idle", run: "Run", walk: "Walk", jump: "Jump", dbljump: "Double Jump", landing: "Landing",
+  crouch: "Crouch", block: "Block", blockhit: "Block — Hit", cblock: "Crouch Block", cblockhit: "Crouch Block — Hit", airblock: "Air Block",
+  atk: "Basic Attack", catk: "Crouch Attack", airatk: "Air Attack",
+  skA: "Skill A", skAair: "Skill A — Air", skAcr: "Skill A — Crouch",
+  skB: "Skill B", skBair: "Skill B — Air", cskB: "Crouch Skill B", cskC: "Crouch Skill C",
+  hit: "Hit", hitlow: "Hit — Low", crouchhit: "Crouch — Hit", damageair: "Air Damage", falldmg: "Fall Damage",
+  kb: "Knockback", ko: "KO", ult: "Ultimate", skill: "Skill", dblfx: "Double-Jump FX"
+};
+function labelFor(name) {
+  return ANIM_LABELS[name] || name.replace(/([a-z])([A-Z0-9])/g, "$1 $2").replace(/^./, c => c.toUpperCase());
+}
 function buildAnimList() {
   G.anims = deriveAnimations(G.char);
   const sel = $("animSel"); sel.innerHTML = "";
-  G.anims.forEach((a, i) => { const o = document.createElement("option"); o.value = i; o.textContent = a.name + "  (" + a.frames.length + ")"; sel.appendChild(o); });
+  G.anims.forEach((a, i) => {
+    const o = document.createElement("option"); o.value = i;
+    o.textContent = labelFor(a.name) + "  ·  " + a.frames.length + (a.frames.length === 1 ? " frame" : " frames");
+    o.title = "sprite key: " + a.name;   // the raw code prefix, for reference
+    sel.appendChild(o);
+  });
   selectAnim(0);
 }
+/* Recommend an fps from the frame count: aim for a ~0.5s cycle, clamped to a natural 6–20 range.
+   Roughly 2 fps per frame — more frames play smoother/faster, fewer frames slower so each pose reads.
+   The recommendation is also the "natural speed" baseline: at rec fps, the in-game timing is unchanged. */
+function recommendFps(frames) { return frames <= 1 ? null : Math.max(6, Math.min(20, Math.round(frames / 0.5))); }
+function macroOf(char) { const v = G.data.charAnimSpeed[char]; return (v > 0) ? v : 1; }
+function getAnimFps(name) { const c = G.data.animFps[G.char]; const v = c && c[name]; return (v > 0) ? v : null; }
+function setAnimFpsVal(name, fps) { if (!G.data.animFps[G.char]) G.data.animFps[G.char] = {}; G.data.animFps[G.char][name] = fps; }
+function clearAnimFps(name) { if (G.data.animFps[G.char]) delete G.data.animFps[G.char][name]; }
+function updateFpsRec() {
+  const rec = recommendFps(G.anim ? G.anim.frames.length : 0), b = $("fpsRec");
+  if (!b) return;
+  if (rec == null) { b.textContent = "static"; b.disabled = true; }
+  else { b.textContent = "rec " + rec; b.disabled = (G.fps === rec); }
+}
+function syncAnimSpeed() { const m = macroOf(G.char); $("animSpeed").value = m; $("animSpeedNum").value = +m.toFixed(2); $("asVal").textContent = m.toFixed(2) + "×"; }
+function setAnimSpeed(v) { v = Math.max(0.3, Math.min(3, v || 1)); G.data.charAnimSpeed[G.char] = v; syncAnimSpeed(); }
 function selectAnim(i) {
-  G.anim = G.anims[i] || G.anims[0]; G.frameIdx = 0; G.fps = G.anim.fps || 10;
+  G.anim = G.anims[i] || G.anims[0]; G.frameIdx = 0;
+  const rec = recommendFps(G.anim.frames.length), ov = getAnimFps(G.anim.name);
+  G.fps = ov || rec || 10; G.anim.fps = G.fps;
   $("fps").value = G.fps; $("animSel").value = String(i);
-  buildStrip(); syncSidebar(); syncCharSize();
+  buildStrip(); syncSidebar(); syncCharSize(); syncAnimSpeed(); updateFpsRec();
+}
+/* Flatten macro × micro into the per-state TIME-SCALE the engine reads (1 = natural speed = no change). */
+function buildTScale() {
+  const out = {};
+  for (const char of Object.keys(G.IMG)) {
+    const set = G.IMG[char]; if (!(set && typeof set === "object" && Object.keys(set).some(k => isFrame(set[k])))) continue;
+    const macro = macroOf(char), map = {};
+    for (const a of deriveAnimations(char)) {
+      if (a.frames.length <= 1) continue;
+      const rec = recommendFps(a.frames.length) || 10;
+      const fps = (G.data.animFps[char] && G.data.animFps[char][a.name]) || rec;
+      const ts = (fps / rec) * macro;
+      if (Math.abs(ts - 1) < 0.002) continue;                 // no-op -> keep the file clean
+      for (const key of a.frames) map[key] = +ts.toFixed(4);
+    }
+    if (Object.keys(map).length) out[char] = map;
+  }
+  G.data.animTScale = out;
 }
 function syncCharSize() {
   const cs = csCur();
@@ -134,7 +201,7 @@ function handles(r) { return [{ n: "nw", x: r.x, y: r.y }, { n: "ne", x: r.x + r
 function tick(now) {
   if (G.playing && G.anim && G.anim.frames.length > 1) {
     const dt = now - (G._last || now); G._acc += dt;
-    const interval = 1000 / Math.max(1, G.fps * G.speed);
+    const interval = 1000 / Math.max(1, G.fps * G.speed * macroOf(G.char));
     let advanced = false;
     while (G._acc >= interval) { G._acc -= interval; G.frameIdx = (G.frameIdx + 1) % G.anim.frames.length; advanced = true; }
     if (advanced) { refreshStrip(); syncSidebar(); }
@@ -228,7 +295,17 @@ $("playBtn").addEventListener("click", () => setPlaying(!G.playing));
 for (const s of document.querySelectorAll(".sbtn")) s.addEventListener("click", () => {
   G.speed = +s.dataset.speed; for (const o of document.querySelectorAll(".sbtn")) o.classList.toggle("on", o === s);
 });
-$("fps").addEventListener("input", () => { G.fps = Math.max(1, +$("fps").value || 10); if (G.anim) G.anim.fps = G.fps; });
+$("fps").addEventListener("input", () => {
+  G.fps = Math.max(1, +$("fps").value || 10); if (G.anim) G.anim.fps = G.fps;
+  setAnimFpsVal(G.anim.name, G.fps); updateFpsRec();
+});
+$("fpsRec").addEventListener("click", () => {
+  const rec = recommendFps(G.anim ? G.anim.frames.length : 0); if (rec == null) return;
+  G.fps = rec; G.anim.fps = rec; $("fps").value = rec; clearAnimFps(G.anim.name); updateFpsRec();   // back on the recommendation
+});
+$("animSpeed").addEventListener("input", () => setAnimSpeed(+$("animSpeed").value));
+$("animSpeedNum").addEventListener("input", () => setAnimSpeed(+$("animSpeedNum").value));
+$("asReset").addEventListener("click", () => setAnimSpeed(1));
 $("onion").addEventListener("change", e => { G.onion = e.target.checked; });
 
 /* ---------------- mouse ---------------- */
@@ -294,8 +371,79 @@ $("defBtn").addEventListener("click", () => {
   G.data.hitboxes[c].default[G.kind] = { x: b.x, y: b.y, w: b.w, h: b.h };
   flash("Set " + c + " default " + G.kind, "ok");
 });
-$("charSel").addEventListener("change", e => { G.char = e.target.value; buildAnimList(); });
+$("charSel").addEventListener("change", e => { G.char = e.target.value; buildAnimList(); syncStats(); });
 $("animSel").addEventListener("change", e => selectAnim(+e.target.value));
+
+/* ---------------- tabs ---------------- */
+function setTab(name) {
+  document.body.className = "mode-" + name;
+  for (const t of document.querySelectorAll(".tab")) t.classList.toggle("on", t.dataset.tab === name);
+  if (name === "test") { syncStats(); positionGameFrame(); startPracticeNow(); }   // straight into the clean arena — no menu
+  else { try { G.win && G.win.eval && G.win.eval("if(typeof running!=='undefined')running=false;"); } catch (e) {} }  // pause the match when leaving
+}
+for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => setTab(t.dataset.tab));
+function positionGameFrame() {
+  const host = document.getElementById("gameHost"); if (!host) return;
+  const r = host.getBoundingClientRect(), g = document.getElementById("game");
+  g.style.left = r.left + "px"; g.style.top = r.top + "px"; g.style.width = Math.max(1, r.width) + "px"; g.style.height = Math.max(1, r.height) + "px";
+}
+window.addEventListener("resize", () => { if (document.body.classList.contains("mode-test")) positionGameFrame(); });
+
+/* ---------------- stats & test ---------------- */
+const STAT_FIELDS = [["stHp", "hp"], ["stArmor", "armor"], ["stSpeed", "speed"], ["stJump", "jump"], ["stPower", "power"], ["stSkill", "skillDmg"]];
+function syncStats() {
+  const c = G.char, s = G.data.charStats[c] || {}, d = G.charDefaults[c] || {};
+  $("statsChar").textContent = c || "—"; $("testCharName").textContent = c || "—";
+  $("stHp").value = s.hp != null ? s.hp : (d.hp != null ? d.hp : "");
+  $("stArmor").value = s.armor != null ? s.armor : (d.armor != null ? d.armor : "");
+  $("stSpeed").value = s.speed != null ? s.speed : (d.speed != null ? d.speed : "");
+  $("stJump").value = s.jump != null ? s.jump : (d.jump != null ? d.jump : "");
+  $("stPower").value = s.power != null ? s.power : (d.power != null ? d.power : "");
+  $("stSkill").value = s.skillDmg != null ? s.skillDmg : 1;
+  $("stHpDef").textContent = d.hp ?? ""; $("stArmorDef").textContent = d.armor ?? ""; $("stSpeedDef").textContent = d.speed ?? ""; $("stJumpDef").textContent = d.jump ?? ""; $("stPowerDef").textContent = d.power ?? "";
+}
+function setStat(key, raw) {
+  const c = G.char; if (!G.data.charStats[c]) G.data.charStats[c] = {};
+  const v = parseFloat(raw);
+  if (raw === "" || isNaN(v)) delete G.data.charStats[c][key]; else G.data.charStats[c][key] = v;
+  if (!Object.keys(G.data.charStats[c]).length) delete G.data.charStats[c];
+}
+for (const [id, key] of STAT_FIELDS) $(id).addEventListener("input", () => setStat(key, $(id).value));
+$("statsReset").addEventListener("click", () => { delete G.data.charStats[G.char]; syncStats(); });
+function applyStatsToGame() {
+  try { G.win.eval("(function(all){ if(typeof CHAR_STATS!=='undefined'){ Object.assign(CHAR_STATS, all); if(typeof applyCharStats==='function')applyCharStats(); } })(" + JSON.stringify(G.data.charStats) + ")"); } catch (e) { console.warn("applyStats", e); }
+}
+function gameHasLauncher() { try { return !!G.win.eval("typeof TOOL_startPractice==='function'"); } catch (e) { return false; } }
+/* Reload the iframe to pick up fresh game code, then run cb once it's ready. */
+function reloadGameThen(cb) {
+  flash("Loading test arena…");
+  const f = document.getElementById("game");
+  const onload = () => {
+    f.removeEventListener("load", onload);
+    const t = setInterval(() => {
+      try { if (f.contentWindow.eval("typeof IMG_SPRITES!=='undefined' && typeof TOOL_startPractice==='function'")) { clearInterval(t); boot(); setTimeout(cb, 250); } } catch (e) {}
+    }, 150);
+    setTimeout(() => clearInterval(t), 8000);
+  };
+  f.addEventListener("load", onload);
+  try { f.contentWindow.location.reload(); } catch (e) {}
+}
+function startPracticeNow() {
+  if (!G.win) return;
+  if (!gameHasLauncher()) { reloadGameThen(startPracticeNow); return; }   // stale game code -> refresh it, then retry
+  applyStatsToGame();
+  let ok = false; try { ok = G.win.eval("TOOL_startPractice('" + G.char + "')"); } catch (e) { flash("Start failed: " + e.message, "err"); return; }
+  if (!ok) { flash("Could not start practice", "err"); return; }
+  positionGameFrame(); flash("Practice — click the game and play", "ok");
+  setTimeout(() => { try { document.getElementById("game").contentWindow.focus(); } catch (e) {} }, 120);
+}
+/* Put the game into the frozen clean arena at load so the title menu is never shown. */
+function primeArena() {
+  if (!gameHasLauncher()) return;
+  try { G.win.eval("TOOL_startPractice('" + G.char + "'); (typeof running!=='undefined')&&(running=false);"); } catch (e) {}
+}
+$("testStart").addEventListener("click", startPracticeNow);
+$("testStop").addEventListener("click", () => { try { G.win.eval("if(typeof running!=='undefined')running=false;"); } catch (e) {} });   // freeze (stay on the clean arena, no menu)
 $("charScale").addEventListener("input", () => setCharSize(+$("charScale").value));
 $("charScaleNum").addEventListener("input", () => setCharSize(+$("charScaleNum").value));
 $("csReset").addEventListener("click", () => setCharSize(1));
@@ -305,6 +453,7 @@ function flash(msg, cls) { const s = $("status"); s.textContent = msg; s.classNa
 $("saveBtn").addEventListener("click", async () => {
   flash("Saving…");
   try {
+    buildTScale();   // flatten macro × per-animation fps into the per-state time-scale the engine reads
     const res = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(G.data) });
     const j = await res.json(); flash(j.ok ? ("Saved → " + j.file) : ("Save failed: " + j.error), j.ok ? "ok" : "err");
   } catch (e) { flash("Save failed: " + e.message, "err"); }
@@ -314,9 +463,15 @@ $("exportBtn").addEventListener("click", () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "hitbox-data.json";
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 });
-$("reloadBtn").addEventListener("click", () => { $("loading").style.display = "flex"; G.win = null; $("game").contentWindow.location.reload(); boot(); });
+$("reloadBtn").addEventListener("click", async () => {
+  $("loading").style.display = "flex"; flash("Rescanning sprite folders…");
+  try { const r = await fetch("/api/rescan", { method: "POST" }); const j = await r.json(); if (j.ok) flash("Rescanned " + j.total + " sprites" + (j.added ? (" · +" + j.added + " new") : ""), "ok"); }
+  catch (e) { flash("Rescan failed: " + e.message, "err"); }
+  G.win = null; $("game").contentWindow.location.reload(); boot();
+});
 
 window.addEventListener("keydown", e => {
+  if (document.body.classList.contains("mode-test")) return;   // don't hijack keys while playtesting
   if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
   if (e.code === "Space") { e.preventDefault(); setPlaying(!G.playing); }
   else if (e.key === "ArrowLeft") { e.preventDefault(); stepFrame(-1); }

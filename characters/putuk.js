@@ -18,24 +18,7 @@
   ],
   ult:{n:"TIME STOP",d:"Time freezes, Krav-Maga barrage: 110 dmg + strips 15 Defense. Then -10% dmg 3s."}
  });
- IMG_SPRITES.putuk={
- idle:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/idle.png"},
- hit:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/hit.png"},
- run0:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/run0.png"},
- run1:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/run1.png"},
- jump:{w:75,h:75,dx:0,foot:2,src:"assets/characters/putuk/jump.png"},
- crouch:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/crouch.png"},
- block:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/block.png"},
- ko:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/ko.png"},
- attack:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/attack.png"},
- attack2:{w:75,h:75,dx:0,foot:2,src:"assets/characters/putuk/attack2.png"},
- skillA:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/skillA.png"},
- skillB:{w:75,h:75,dx:0,foot:2,src:"assets/characters/putuk/skillB.png"},
- skillC:{w:80,h:80,dx:0,foot:2,src:"assets/characters/putuk/skillC.png"},
- skillC2:{w:67,h:67,dx:0,foot:2,src:"assets/characters/putuk/skillC2.png"},
- ult1:{w:87,h:87,dx:0,foot:2,src:"assets/characters/putuk/ult1.png"},
- ult2:{w:95,h:95,dx:0,foot:2,src:"assets/characters/putuk/ult2.png"}
-};
+ IMG_SPRITES.putuk={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  SPRITES.putuk={pal:{p:"#0f3d3a",P:"#092825",c:"#3fd8c7",a:"#efe6d2",h:"#1c1c1c",s:"#dfb894",e:"#3fd8c7",k:"#0a1a18"},g:[
 "......hhhh......",
 ".....hhhhhh.....",

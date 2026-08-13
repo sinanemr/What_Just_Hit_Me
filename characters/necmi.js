@@ -18,39 +18,7 @@
   ],
   ult:{n:"ASTRAL POSSESSION",d:"100 dmg, STUN 1.2s, drains 10% of foe's Ult, heals 15 HP (+10 via Chaotic Feed). Backlash: -20 HP."}
  });
- IMG_SPRITES.necmi={
- idle:{w:28,h:72,src:"assets/characters/necmi/idle.png"},
- attack:{w:78,h:63,src:"assets/characters/necmi/attack.png"},
- attack2:{w:75,h:70,src:"assets/characters/necmi/attack2.png"},
- attack3:{w:77,h:71,src:"assets/characters/necmi/attack3.png"},
- hit:{w:40,h:68,src:"assets/characters/necmi/hit.png"},
- block:{w:61,h:69,src:"assets/characters/necmi/block.png"},
- crouch:{w:32,h:56,src:"assets/characters/necmi/crouch.png"},
- jump:{w:50,h:62,src:"assets/characters/necmi/jump.png"},
- ko:{w:78,h:39,src:"assets/characters/necmi/ko.png"},
- skillA:{w:58,h:68,src:"assets/characters/necmi/skillA.png"},
- skillA2:{w:48,h:70,src:"assets/characters/necmi/skillA2.png"},
- pinchmass:{w:20,h:15,src:"assets/characters/necmi/pinchmass.png"},
- skillB:{w:49,h:71,src:"assets/characters/necmi/skillB.png"},
- hijackwalker:{w:62,h:30,src:"assets/characters/necmi/hijackwalker.png"},
- hijackwalker2:{w:58,h:25,src:"assets/characters/necmi/hijackwalker2.png"},
- hijackwalker3:{w:58,h:29,src:"assets/characters/necmi/hijackwalker3.png"},
- hijackswarm:{w:44,h:58,src:"assets/characters/necmi/hijackswarm.png"},
- skillB3:{w:44,h:58,src:"assets/characters/necmi/skillB3.png"},
- run0:{w:41,h:70,src:"assets/characters/necmi/run0.png"},
- run1:{w:36,h:70,src:"assets/characters/necmi/run1.png"},
- run2:{w:46,h:70,src:"assets/characters/necmi/run2.png"},
- run3:{w:35,h:70,src:"assets/characters/necmi/run3.png"},
- skillC:{w:51,h:70,src:"assets/characters/necmi/skillC.png"},
- skillC2:{w:66,h:71,src:"assets/characters/necmi/skillC2.png"},
- skillC3:{w:54,h:71,src:"assets/characters/necmi/skillC3.png"},
- skillC4:{w:63,h:66,src:"assets/characters/necmi/skillC4.png"},
- ult:{w:41,h:71,src:"assets/characters/necmi/ult.png"},
- ghostfly:{w:66,h:46,src:"assets/characters/necmi/ghostfly.png"},
- ghostfly2:{w:52,h:46,src:"assets/characters/necmi/ghostfly2.png"},
- ghostpossess:{w:41,h:52,src:"assets/characters/necmi/ghostpossess.png"},
- ghostpossess2:{w:54,h:68,src:"assets/characters/necmi/ghostpossess2.png"}
-};
+ IMG_SPRITES.necmi={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  ABILITIES.necmi=[
   f=>{f.state="special";f.t=0;announce("PINCH-MASS SHOT!",650);
    f.skillAT=0.85;f.skillLock=0.85;f.poseSkill=0;       /* hold wind-up, then snap to release */

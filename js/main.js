@@ -48,4 +48,14 @@ function refreshControlLabels() {
   // Title-screen Settings button (added in RUN_GAME.html).
   const titleSettings = document.getElementById("titleSettingsBtn");
   if (titleSettings) titleSettings.addEventListener("click", () => openSettings("title"));
+
+  // DEV TOOL embed (?tool=1): boot straight into the clean practice arena — never show the
+  // title / character-select / stage. The Hitbox Editor then drives the character via TOOL_startPractice.
+  try {
+    if (new URLSearchParams(location.search).get("tool") === "1" && typeof TOOL_startPractice === "function") {
+      document.body.classList.add("tool-embed");
+      const first = (typeof CHARS !== "undefined" && CHARS.length) ? CHARS[0].id : null;
+      if (first) TOOL_startPractice(first);
+    }
+  } catch (e) {}
 })();

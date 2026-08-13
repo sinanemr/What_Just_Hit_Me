@@ -18,25 +18,7 @@
   ],
   ult:{n:"ADRENALINE SURGE",d:"Adrenaline X 8s: +40% dmg, -25% taken, ignore 15% Armor, paralysis & bleed empowered. Then CRASH: -50 HP, -15% dmg & accuracy 3s."}
  });
- IMG_SPRITES.warbringer={
- idle:{w:46,h:72,src:"assets/characters/warbringer/idle.png"},
- attack:{w:77,h:71,src:"assets/characters/warbringer/attack.png"},
- attack2:{w:61,h:73,src:"assets/characters/warbringer/attack2.png"},
- hit:{w:64,h:71,src:"assets/characters/warbringer/hit.png"},
- block:{w:48,h:73,src:"assets/characters/warbringer/block.png"},
- crouch:{w:61,h:57,src:"assets/characters/warbringer/crouch.png"},
- jump:{w:49,h:78,src:"assets/characters/warbringer/jump.png"},
- ko:{w:77,h:28,src:"assets/characters/warbringer/ko.png"},
- skillA:{w:95,h:73,src:"assets/characters/warbringer/skillA.png"},
- skillB:{w:88,h:72,src:"assets/characters/warbringer/skillB.png"},
- skillC:{w:83,h:72,src:"assets/characters/warbringer/skillC.png"},
- ult:{w:63,h:72,src:"assets/characters/warbringer/ult.png"},
- run0:{w:72,h:72,src:"assets/characters/warbringer/run0.png"},
- run1:{w:72,h:72,src:"assets/characters/warbringer/run1.png"},
- run2:{w:72,h:72,src:"assets/characters/warbringer/run2.png"},
- run3:{w:72,h:72,src:"assets/characters/warbringer/run3.png"},
- run4:{w:72,h:72,src:"assets/characters/warbringer/run4.png"}
-};
+ IMG_SPRITES.warbringer={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  ABILITIES.warbringer=[
   f=>{f.state="special";f.t=0;announce("TEMPEST BLADES!",600);
    meleeHit(f,{range:S(48),dmg:65,kb:60,delay:80,opts:{skill:true,col:"#9fb8c9",fx:"#9fb8c9"}});

@@ -18,23 +18,7 @@
   ],
   ult:{n:"RESONANCE OF SILENCE",d:"100 dmg, SILENCE 1.5s, stun 0.7s, +3 stacks & 20% resistance 4s."}
  });
- IMG_SPRITES.notalk={
- idle:{w:29,h:72,src:"assets/characters/no-talking-man/idle.png"},
- run0:{w:33,h:73,src:"assets/characters/no-talking-man/run0.png"},
- run1:{w:25,h:73,dx:1,src:"assets/characters/no-talking-man/run1.png"},
- run2:{w:32,h:73,src:"assets/characters/no-talking-man/run2.png"},
- jump:{w:51,h:59,foot:12,dx:2,src:"assets/characters/no-talking-man/jump.png"},
- crouch:{w:41,h:62,src:"assets/characters/no-talking-man/crouch.png"},
- block:{w:33,h:72,dx:-2,src:"assets/characters/no-talking-man/block.png"},
- hit:{w:36,h:73,dx:-1,src:"assets/characters/no-talking-man/hit.png"},
- ko:{w:36,h:76,src:"assets/characters/no-talking-man/ko.png"},
- attack:{w:69,h:66,dx:2,src:"assets/characters/no-talking-man/attack.png"},
- attack2:{w:78,h:69,dx:4,src:"assets/characters/no-talking-man/attack2.png"},
- skillA:{w:79,h:68,dx:11,src:"assets/characters/no-talking-man/skillA.png"},
- skillB:{w:70,h:69,dx:5,src:"assets/characters/no-talking-man/skillB.png"},
- skillC:{w:49,h:72,dx:10,src:"assets/characters/no-talking-man/skillC.png"},
- ult:{w:80,h:79,dx:3,src:"assets/characters/no-talking-man/ult.png"}
-};
+ IMG_SPRITES.notalk={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  SPRITES.notalk={pal:{p:"#17161c",P:"#0c0b10",w:"#efe6d2",a:"#8f6cf0",s:"#d8cfc4",S:"#b3a89a",e:"#26242e",k:"#0c0b10"},g:[
 "......ssss......",
 ".....ssssss.....",

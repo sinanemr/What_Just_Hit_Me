@@ -25,28 +25,7 @@
              the pose switches); safe to omit
       foot   optional extra vertical offset, same purpose as dx but up/down; safe to omit
       src    the PNG asset path (assets/characters/<id>/<state>.png) -- swap the file to change the art */
- IMG_SPRITES.haydar={
- idle:{w:80,h:80,dx:-8,foot:1,src:"assets/characters/haydar/idle.png"},
- hit:{w:38,h:72,src:"assets/characters/haydar/hit.png"},
- run0:{w:80,h:80,dx:-8,src:"assets/characters/haydar/run0.png"},
- run1:{w:80,h:80,dx:-8,src:"assets/characters/haydar/run1.png"},
- run2:{w:80,h:80,dx:-8,src:"assets/characters/haydar/run2.png"},
- run3:{w:80,h:80,dx:-8,src:"assets/characters/haydar/run3.png"},
- jump:{w:80,h:80,dx:-8,src:"assets/characters/haydar/jump.png"},
- crouch:{w:80,h:80,dx:-8,src:"assets/characters/haydar/crouch.png"},
- block:{w:80,h:80,dx:-8,src:"assets/characters/haydar/block.png"},
- ko:{w:80,h:80,dx:-8,src:"assets/characters/haydar/ko.png"},
- attack:{w:80,h:80,dx:-8,src:"assets/characters/haydar/attack.png"},
- attack2:{w:80,h:80,dx:-8,src:"assets/characters/haydar/attack2.png"},
- attack3:{w:80,h:80,dx:-8,src:"assets/characters/haydar/attack3.png"},
- skillA:{w:80,h:80,dx:-8,src:"assets/characters/haydar/skillA.png"},
- skillA2:{w:80,h:80,dx:-8,src:"assets/characters/haydar/skillA2.png"},
- skillB:{w:80,h:80,dx:-8,src:"assets/characters/haydar/skillB.png"},
- skillBc:{w:80,h:80,dx:-8,src:"assets/characters/haydar/skillBc.png"},
- skillC:{w:80,h:80,dx:-8,src:"assets/characters/haydar/skillC.png"},
- ult1:{w:80,h:80,dx:-8,src:"assets/characters/haydar/ult1.png"},
- ult2:{w:80,h:80,dx:-8,src:"assets/characters/haydar/ult2.png"}
-};
+ IMG_SPRITES.haydar={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  /* Fallback pixel-art -- only used if this hero has no matching key up in IMG_SPRITES above.
       pal  one-letter color code -> hex color. Edit a hex value to recolor that part
            everywhere it appears in the grid below (e.g. change p's value to recolor the coat).

@@ -10,17 +10,21 @@
  * size + backing (supersampled) resolution, camera clamping, HUD width, stage crop
  * and the responsive fight-container width — no CSS edits needed.
  */
+// Dev-tool embed (?tool=1 on the URL): use a TALLER viewport so the practice arena is a vertical
+// space (full character + headroom for jumps), and drop the ground near the bottom.
+const _TOOL_EMBED = (typeof location !== "undefined") && /[?&]tool=1(?:&|$)/.test(location.search || "");
+
 const GAME_CONFIG = {
   gameSpeed: 0.8,      // GAME_SPEED — global simulation speed (1 = normal; <1 slows the WHOLE game
                        //   uniformly: movement, gravity, jumps, animations, cooldowns, timers).
   viewport: {
     width: 720,        // W  — visible world width (logical px); the camera window
-    height: 270,       // H  — visible world height (logical px)
+    height: _TOOL_EMBED ? 560 : 270,   // H  — visible world height (logical px); taller in the dev tool
     renderScale: 2     // RENDER_SCALE — supersample: canvas backing = width*scale
   },
   world: {
     width: 2032,       // WORLD_W — total scrollable stage width
-    ground: 230,       // GROUND  — y of the ground line (logical px); lower = fighters stand further back/up
+    ground: _TOOL_EMBED ? 500 : 230,   // GROUND  — y of the ground line (logical px); lower = fighters stand further back/up
     gravity: 1200,     // GRAV    — downward acceleration (px/s^2)
     leftWall: 20,      // WALL_L  — invisible left bound (widened: near the full stage)
     rightWall: 2012    // WALL_R  — invisible right bound (widened: near the full stage)

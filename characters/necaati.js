@@ -18,11 +18,7 @@
   ],
   ult:{n:"PERFECT EQUILIBRIUM",d:"Damage, strip everything, drain 50 ENERGY, heal 100."}
  });
- IMG_SPRITES.necaati={
- idle:{w:42,h:72,src:"assets/characters/necaati/idle.png"},
- attack:{w:54,h:61,src:"assets/characters/necaati/attack.png"},
- hit:{w:37,h:72,src:"assets/characters/necaati/hit.png"}
-};
+ IMG_SPRITES.necaati={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  SPRITES.necaati={pal:{p:"#efe6d2",P:"#cdbfa2",c:"#f2b632",a:"#3fd8c7",h:"#6b4a2b",s:"#e6cfae",g:"#ffd76a",e:"#20180f",k:"#8a6f4a"},g:[
 ".....gggggg.....",
 "......hhhh......",

@@ -18,29 +18,7 @@
   ],
   ult:{n:"BLOOD X CLAWS",d:"X-shaped blood slash across the arena: 110 dark dmg + BLEED, then BLOOD FRENZY."}
  });
- IMG_SPRITES.agron={
- idle:{w:70,h:72,dx:2,src:"assets/characters/agron/idle.png"},
- run0:{w:79,h:71,foot:1,dx:5,src:"assets/characters/agron/run0.png"},
- jump:{w:68,h:69,foot:2,dx:4,src:"assets/characters/agron/jump.png"},
- fly:{w:62,h:72,foot:3,dx:-1,src:"assets/characters/agron/fly.png"},
- crouch:{w:70,h:55,dx:-4,src:"assets/characters/agron/crouch.png"},
- block:{w:69,h:70,dx:-6,src:"assets/characters/agron/block.png"},
- hit:{w:47,h:76,dx:-2,src:"assets/characters/agron/hit.png"},
- ko:{w:84,h:26,foot:1,dx:1,src:"assets/characters/agron/ko.png"},
- attack:{w:72,h:71,dx:7,src:"assets/characters/agron/attack.png"},
- attack2:{w:86,h:67,dx:10,src:"assets/characters/agron/attack2.png"},
- attack3:{w:75,h:75,dx:8,src:"assets/characters/agron/attack3.png"},
- skillA:{w:88,h:47,dx:16,src:"assets/characters/agron/skillA.png"},
- skillB:{w:90,h:72,foot:3,dx:9,src:"assets/characters/agron/skillB.png"},
- skillB2:{w:69,h:69,foot:1,dx:5,src:"assets/characters/agron/skillB2.png"},
- skillB3:{w:69,h:72,dx:1,src:"assets/characters/agron/skillB3.png"},
- skillB4:{w:90,h:72,dx:8,src:"assets/characters/agron/skillB4.png"},
- skillC:{w:94,h:89,foot:7,dx:1,src:"assets/characters/agron/skillC.png"},
- skillC2:{w:98,h:96,foot:1,dx:9,src:"assets/characters/agron/skillC2.png"},
- skillC3:{w:97,h:77,dx:6,src:"assets/characters/agron/skillC3.png"},
- ult1:{w:88,h:72,dx:2,src:"assets/characters/agron/ult1.png"},
- ult2:{w:83,h:69,dx:4,src:"assets/characters/agron/ult2.png"}
-};
+ IMG_SPRITES.agron={}/* sprites come from characters/sprite-manifest.js (per-animation folders) */;
  SPRITES.agron={pal:{p:"#1a1424",P:"#0e0a16",C:"#5e1220",a:"#9c1d2e",s:"#cfd6de",S:"#a7b0bc",h:"#0c0c14",w:"#ffffff",e:"#e2384a",k:"#2a0e18"},g:[
 "......hhhh......",
 ".....hhhhhh.....",

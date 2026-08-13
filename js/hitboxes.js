@@ -29,6 +29,37 @@ const CHAR_SCALE = {};
 const CHAR_SCALE_KEY = "wjhm-charscale-v1";
 /** The size multiplier for a character (1 = default). */
 function charScaleOf(id){ return (CHAR_SCALE[id] > 0) ? CHAR_SCALE[id] : 1; }
+/** ANIMATION SPEED (fps) authoring. The tool stores a MACRO per-character multiplier + MICRO per-animation
+ *  fps, and flattens them into a per-state TIME-SCALE the engine multiplies into the state clock (f.t).
+ *  1 = the animation's natural/current speed, >1 = faster, <1 = slower. Safe by default (missing = 1). */
+const CHAR_ANIM_SPEED = {};   // charId -> macro multiplier (tool round-trip)
+const ANIM_FPS = {};          // charId -> animName -> fps (tool round-trip)
+const ANIM_TSCALE = {};       // charId -> stateKey -> time-scale (what the engine actually consumes)
+/** The time-scale the engine applies to a fighter's state clock for its current frame (1 = unchanged). */
+function animTScaleOf(id, key){ const c = ANIM_TSCALE[id]; const v = c && key && c[key]; return (v > 0) ? v : 1; }
+
+/** Per-character STAT overrides authored in the tool: charId -> {hp, armor, speed, jump, power, skillDmg}.
+ *  hp/armor/speed/jump/power override the character definition; skillDmg multiplies the damage of that
+ *  character's skill hits (applied live in takeDamage). Missing fields keep the original value. */
+const CHAR_STATS = {};
+let _CHAR_STATS_ORIG = null;
+/** Re-apply stat overrides onto the CHARS definitions (idempotent + reset-safe). Call after the character
+ *  modules load, and again whenever the tool changes stats. */
+function applyCharStats(){
+  if(typeof CHARS === "undefined") return;
+  if(!_CHAR_STATS_ORIG){ _CHAR_STATS_ORIG = {}; for(const c of CHARS) _CHAR_STATS_ORIG[c.id] = { hp:c.hp, armor:c.armor, speed:c.speed, jump:c.jump, power:c.power }; }
+  for(const c of CHARS){
+    const o = _CHAR_STATS_ORIG[c.id]; if(!o) continue;
+    const s = CHAR_STATS[c.id] || {};
+    c.hp    = (s.hp    > 0)  ? s.hp    : o.hp;
+    c.armor = (s.armor >= 0) ? s.armor : o.armor;
+    c.speed = (s.speed > 0)  ? s.speed : o.speed;
+    c.jump  = (s.jump  > 0)  ? s.jump  : o.jump;
+    c.power = (s.power >= 0) ? s.power : o.power;
+  }
+}
+/** Skill-damage multiplier for a character (1 = unchanged). */
+function skillDmgMultOf(id){ const s = CHAR_STATS[id]; return (s && s.skillDmg > 0) ? s.skillDmg : 1; }
 
 function loadHitboxes(){
   try{ const raw = localStorage.getItem(HITBOX_STORAGE_KEY); if(raw) Object.assign(HITBOXES, JSON.parse(raw)); }
@@ -36,6 +67,8 @@ function loadHitboxes(){
   try{ const raw = localStorage.getItem(SPRITE_ALIGN_KEY); if(raw) Object.assign(SPRITE_ALIGN, JSON.parse(raw)); }
   catch(e){ console.warn("spritealign: load failed", e); }
   try{ const raw = localStorage.getItem(CHAR_SCALE_KEY); if(raw) Object.assign(CHAR_SCALE, JSON.parse(raw)); }
+  catch(e){}
+  try{ const raw = localStorage.getItem("wjhm-animtscale-v1"); if(raw) Object.assign(ANIM_TSCALE, JSON.parse(raw)); }
   catch(e){}
 }
 function saveHitboxes(){
@@ -85,7 +118,7 @@ function attackBoxOf(f){
 /** Does f's melee attack connect with foe? Box-based when BOTH an attack box (attacker) and a hurt
  *  box (defender) are authored; otherwise the legacy reach/vertical heuristic (so nothing regresses). */
 function meleeConnects(f, foe, reach, hH){
-  const ab = attackBoxOf(f), hb = hurtBoxFor(foe.d.id, foe._frameKey);
+  const ab = attackBoxOf(f), hb = foe._toolDummy ? (typeof DUMMY_HURT!=="undefined"?DUMMY_HURT:null) : hurtBoxFor(foe.d.id, foe._frameKey);
   if(ab && hb) return aabbOverlap(boxToWorld(f, ab), boxToWorld(foe, hb));
   const dx = foe.x - f.x;
   return Math.abs(dx) < S(reach) && dx*f.facing > -10 && Math.abs(foe.hurtY - f.centerY) < S(hH);
