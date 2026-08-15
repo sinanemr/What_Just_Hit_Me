@@ -2,8 +2,8 @@
  * What Just Hit Me — blue plastic CRADLES (fish crates) around the Kabatepe dive gear.
  * Plain <script>, loaded AFTER engine.js (uses ctx). Pure static decoration.
  *
- * ONE crate next to the regulator diver (js/regulator.js, world 845/270 — FOREGROUND, drawn in
- * front of the fighters) and TWO stacked next to the compressor (js/compressorMech.js, world
+ * ONE crate next to the regulator diver (stages/kabatepe/regulator.js, world 845/270 — FOREGROUND, drawn in
+ * front of the fighters) and TWO stacked next to the compressor (stages/kabatepe/compressorMech.js, world
  * 1035/210 — BACKGROUND, behind the fighters, so smaller for depth). Each placement's `fore` flag
  * routes it to the right layer: drawCradleFore() with the foreground, drawCradleBehind() with the
  * background decor.

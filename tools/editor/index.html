@@ -12,6 +12,7 @@
     <div id="tabs">
       <button class="tab on" data-tab="editor">Boxes &amp; Animation</button>
       <button class="tab" data-tab="test">Stats &amp; Test</button>
+      <button class="tab" data-tab="map">Map</button>
     </div>
     <label class="field">Character
       <select id="charSel"></select>
@@ -147,9 +148,62 @@
     <div id="gameHost"></div>
   </section>
 
+  <!-- ============ MAP EDITOR VIEW — full-width stage viewport + compact bottom toolbar ============ -->
+  <section id="mapView">
+    <div id="mapHost">
+      <canvas id="mapOverlay"></canvas>
+      <div id="mapDiag" class="mapdiag"></div>
+      <div id="mapHint" class="maphint">scroll = zoom · Space/middle-drag = pan · drag a marker = move object · <b style="color:#ff6b6b">red</b> = fighter walls · <b style="color:#f2b632">yellow</b> = stage edge · press <b>D</b> = diagnostics</div>
+    </div>
+
+    <div id="mapToolbar">
+      <!-- OBJECTS -->
+      <div class="tgroup" id="tgObjects">
+        <div class="tglabel">Objects</div>
+        <div id="mapObjList" class="objrow"></div>
+      </div>
+
+      <!-- SELECTED OBJECT -->
+      <div class="tgroup" id="tgSelected">
+        <div class="tglabel">Selected · <span id="mapSelName">none</span></div>
+        <div class="tgbody">
+          <label class="fld">World X<input id="mapWX" type="number" step="1" disabled></label>
+          <label class="fld">World Y<input id="mapWY" type="number" step="1" disabled></label>
+          <label class="fld">Size<input id="mapScaleNum" type="number" step="0.05" min="0.2" value="1" disabled></label>
+          <button id="mapObjReset" class="btn ghost sm" disabled>Reset</button>
+        </div>
+      </div>
+
+      <!-- WORLD LIMITS -->
+      <div class="tgroup" id="tgLimits">
+        <div class="tglabel">World limits</div>
+        <div class="tgbody">
+          <label class="fld">Left<input id="mapWallL" type="number" step="1"></label>
+          <label class="fld">Right<input id="mapWallR" type="number" step="1"></label>
+          <button id="mapLimitsReset" class="btn ghost sm">Reset</button>
+        </div>
+      </div>
+
+      <!-- VIEW (zoom / pan / fit) -->
+      <div class="tgroup" id="tgView">
+        <div class="tglabel">View</div>
+        <div class="tgbody">
+          <button id="mapZoomOut" class="btn ghost sm" title="Zoom out">−</button>
+          <span id="mapZoomPct" class="zoompct">100%</span>
+          <button id="mapZoomIn" class="btn ghost sm" title="Zoom in">+</button>
+          <button id="mapFit" class="btn ghost sm" title="Fit the whole stage">Fit Stage</button>
+          <button id="mapResetView" class="btn ghost sm" title="Reset zoom &amp; pan">Reset View</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Hidden until the Stats&Test tab; the editor reads its sprites regardless of visibility.
        ?tool=1 makes the game boot straight into the clean practice arena (no menu / select / stage). -->
   <iframe id="game" src="/game/RUN_GAME.html?tool=1" title="game" tabindex="-1"></iframe>
+  <!-- Map preview: a SEPARATE game instance loaded WITHOUT ?tool=1, so it renders at the real game
+       viewport/ground (H=270, GROUND=230) — the background aligns with decor exactly as in-game. -->
+  <iframe id="mapGame" src="/game/RUN_GAME.html?map=1" title="map" tabindex="-1"></iframe>
 
   <script src="./editor.js"></script>
 </body>

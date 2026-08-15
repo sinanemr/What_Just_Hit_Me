@@ -98,78 +98,87 @@
 <!-- Plain scripts in order (config + controls define globals, then the engine, then labels).
      Classic scripts work over file:// AND http://, so index.html runs by double-click or via a server. -->
 <script src="./js/config.js"></script>
+<!-- generic map-override framework (stage-agnostic): MAP_DATA + mapDraw + world-limit application. -->
+<script src="./js/map-system.js"></script>
+<!-- KABATEPE STAGE: definition + editable-object registry, then its saved move/size + world-limit
+     overrides. Both load BEFORE engine so world-limit overrides reach CFG in time. -->
+<script src="./stages/kabatepe/kabatepe-stage.js"></script>
+<script src="./stages/kabatepe/map-data.js"></script>
 <script src="./js/controls.js"></script>
 <script src="./js/settings.js"></script>
 <script src="./js/engine.js"></script>
 <!-- visual hitbox/alignment data model + runtime helpers (Character Lab) -->
 <script src="./js/hitboxes.js"></script>
 <!-- stage hazards: roaming dog + right-side toilet event (need engine globals) -->
-<script src="./js/dog.js"></script>
-<script src="./js/toilet.js"></script>
+<script src="./stages/kabatepe/dog.js"></script>
+<script src="./stages/kabatepe/toilet.js"></script>
 <!-- left-road parked traffic (decor only; needs engine globals) -->
-<script src="./js/cars.js"></script>
+<script src="./stages/kabatepe/cars.js"></script>
 <!-- explodable, standable car in front of the boats (needs engine + cars.js globals) -->
-<script src="./js/car.js"></script>
+<script src="./stages/kabatepe/car.js"></script>
 <!-- explosive CO2 cylinders at player level (needs engine + cars.js globals) -->
-<script src="./js/co2explosive.js"></script>
+<script src="./stages/kabatepe/co2explosive.js"></script>
 <!-- left-road parked traffic (decor only; needs engine globals) -->
-<script src="./js/scaffold.js"></script>
+<script src="./stages/kabatepe/scaffold.js"></script>
 <!-- metal ironboxes on/around the scaffolds (decor; needs engine + scaffold globals) -->
-<script src="./js/ironbox.js"></script>
+<script src="./stages/kabatepe/ironbox.js"></script>
 <!-- compressor by the sea (decor only; needs engine globals) -->
-<script src="./js/compressorMech.js"></script>
+<script src="./stages/kabatepe/compressorMech.js"></script>
 <!-- compressor NPC in front of the boat (decor only; needs engine globals) -->
-<script src="./js/compressor.js"></script>
+<script src="./stages/kabatepe/compressor.js"></script>
 <!-- seated NPC by the sea (decor only; needs engine globals) -->
-<script src="./js/sitter.js"></script>
+<script src="./stages/kabatepe/sitter.js"></script>
 <!-- Wet suits (decor only; needs engine globals) -->
-<script src="./js/WetsuitsDry.js"></script>
+<script src="./stages/kabatepe/WetsuitsDry.js"></script>
 <!-- yellow diving fins in front of the wetsuit rack (decor only; needs engine globals) -->
-<script src="./js/yellowfin.js"></script>
+<script src="./stages/kabatepe/yellowfin.js"></script>
 <!-- diving masks by the CO2 tank and the boat (decor only; needs engine globals) -->
-<script src="./js/scubaglasses.js"></script>
+<script src="./stages/kabatepe/scubaglasses.js"></script>
 <!-- blue plastic crates by the regulator and the compressor (decor only; needs engine globals) -->
-<script src="./js/plasticcradle.js"></script>
+<script src="./stages/kabatepe/plasticcradle.js"></script>
 <!-- fishbox (decor only; needs engine globals) -->
-<script src="./js/fishbox.js"></script>
+<script src="./stages/kabatepe/fishbox.js"></script>
 <!-- lighthouse (decor only; needs engine globals) -->
-<script src="./js/lighthouse.js"></script>
+<script src="./stages/kabatepe/lighthouse.js"></script>
 <!-- CO2 Tank (decor only; needs engine globals) -->
-<script src="./js/CO2Tank.js"></script>
+<script src="./stages/kabatepe/CO2Tank.js"></script>
 <!-- rod (decor only; needs engine globals) -->
-<script src="./js/fishingRod.js"></script>
+<script src="./stages/kabatepe/fishingRod.js"></script>
 <!-- Fishnet (decor only; needs engine globals) -->
-<script src="./js/fishnet.js"></script>
+<script src="./stages/kabatepe/fishnet.js"></script>
 <!-- talking kids NPC (decor only; needs engine globals) -->
-<script src="./js/kids.js"></script>
+<script src="./stages/kabatepe/kids.js"></script>
 <!-- talking tourists NPC (decor only; needs engine globals) -->
-<script src="./js/tourist.js"></script>
+<script src="./stages/kabatepe/tourist.js"></script>
 <!-- balikci NPC by the sea (decor only; needs engine globals) -->
-<script src="./js/balik.js"></script>
+<script src="./stages/kabatepe/balik.js"></script>
 <!-- snacking kid on top of the boat (decor only; needs engine globals) -->
-<script src="./js/kid.js"></script>
+<script src="./stages/kabatepe/kid.js"></script>
 <!-- diver checking his regulator, by the scuba tanks (decor only; needs engine globals) -->
-<script src="./js/regulator.js"></script>
+<script src="./stages/kabatepe/regulator.js"></script>
 <!-- coiled mooring ropes on the pier near the boats (decor only; needs engine globals) -->
-<script src="./js/rope.js"></script>
+<script src="./stages/kabatepe/rope.js"></script>
 <!-- wooden pallets left around the otoparks (decor only; needs engine globals) -->
-<script src="./js/pallet.js"></script>
+<script src="./stages/kabatepe/pallet.js"></script>
 <!-- trashbins (decor only; needs engine globals) -->
-<script src="./js/trashbin.js"></script>
+<script src="./stages/kabatepe/trashbin.js"></script>
 <!-- plastic chairs (decor only; needs engine globals) -->
-<script src="./js/seat.js"></script>
+<script src="./stages/kabatepe/seat.js"></script>
 <!-- soda patio umbrellas (decor only; needs engine globals) -->
-<script src="./js/sodaumbrella.js"></script>
+<script src="./stages/kabatepe/sodaumbrella.js"></script>
 <!-- backgammon tables (decor only; needs engine globals) -->
-<script src="./js/blackgammon.js"></script>
+<script src="./stages/kabatepe/blackgammon.js"></script>
 <!-- wooden stools (decor only; needs engine globals) -->
-<script src="./js/stool.js"></script>
+<script src="./stages/kabatepe/stool.js"></script>
 <!-- ambient seagulls in the sky (decor only; needs engine globals) -->
-<script src="./js/birds.js"></script>
+<script src="./stages/kabatepe/birds.js"></script>
 <!-- shark fin in the distant sea (decor only; needs engine globals) -->
-<script src="./js/shark.js"></script>
+<script src="./stages/kabatepe/shark.js"></script>
 <!-- subtle water shimmer on the sea (decor only; needs engine globals) -->
-<script src="./js/waves.js"></script>
+<script src="./stages/kabatepe/waves.js"></script>
+<!-- Kabatepe editable-object registry: loads LAST (after every object file) so it can read each
+     object's real anchor constant, then registers them with the Map system for the Map Editor. -->
+<script src="./stages/kabatepe/kabatepe-objects.js"></script>
 <!-- character modules (load AFTER engine.js; add one line per peeled character) -->
 <script src="./characters/haydar.js"></script>
 <script src="./characters/satori.js"></script>

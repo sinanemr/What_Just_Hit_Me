@@ -52,10 +52,17 @@ function refreshControlLabels() {
   // DEV TOOL embed (?tool=1): boot straight into the clean practice arena — never show the
   // title / character-select / stage. The Hitbox Editor then drives the character via TOOL_startPractice.
   try {
-    if (new URLSearchParams(location.search).get("tool") === "1" && typeof TOOL_startPractice === "function") {
+    const _q = new URLSearchParams(location.search);
+    if (_q.get("tool") === "1" && typeof TOOL_startPractice === "function") {
       document.body.classList.add("tool-embed");
       const first = (typeof CHARS !== "undefined" && CHARS.length) ? CHARS[0].id : null;
       if (first) TOOL_startPractice(first);
+    }
+    // MAP EDITOR embed (?map=1): boot straight into the frozen full-stage map view. Keeps the REAL game
+    // viewport/ground (background stays aligned with decor) but fills the iframe like tool-embed.
+    if (_q.get("map") === "1" && typeof TOOL_startMapView === "function") {
+      document.body.classList.add("map-embed");
+      TOOL_startMapView();
     }
   } catch (e) {}
 })();

@@ -48,6 +48,8 @@ const SPAWN_1=CFG.fighters.player1Spawn, SPAWN_2=CFG.fighters.player2Spawn;
 let camX=(WORLD_W-W)/2;      /* left edge of the viewport, in world px */
 let camScale=1;              /* camera zoom: 1 = normal; <1 = pulled back when fighters are far apart */
 let TOOL_CLEAN=false;        /* Hitbox Editor "Stats & Test": plain arena — no stage backdrop / decor / props */
+let TOOL_MAP=false;          /* Map Editor: full stage shown, whole world fit to view, simulation frozen */
+let _mapCamTop=0;            /* Map Editor only: world Y at the TOP of the view (free vertical pan; GROUND-independent) */
 const TOOL_CAM_ZOOM=2.8;     /* fixed closer camera for the test arena (bigger characters, editor-like view) */
 const TOOL_CAM_YOFF=0;       /* taller viewport already provides jump headroom; no extra shift (was cutting the legs) */
 const DUMMY_HURT={x:-15,y:0,w:30,h:70};   /* the practice dummy's hurt box (also drawn in the overlay) */
@@ -346,7 +348,7 @@ addEventListener("keydown",e=>{
   if(typeof ONLINE!=="undefined"&&(ONLINE.mode==="match-host"||ONLINE.mode==="match-guest")){
    e.preventDefault(); if(typeof ONLINE_toggleMatchMenu==="function")ONLINE_toggleMatchMenu(); return;
   }
-  if(!TOOL_CLEAN&&running&&!roundOver&&document.getElementById("fight").classList.contains("active")){e.preventDefault();togglePause();}
+  if(!TOOL_CLEAN&&!TOOL_MAP&&running&&!roundOver&&document.getElementById("fight").classList.contains("active")){e.preventDefault();togglePause();}
   return;
  }
  keys[e.key.toLowerCase()]=true; if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase()))e.preventDefault();});
@@ -3144,6 +3146,7 @@ let lastT=0;
    projectiles/effects, and the camera. Authoritative — runs locally and on the
    online host, never on the online guest (which renders host snapshots instead). */
 function updateSimulation(dt){
+ if(TOOL_MAP)return;   /* Map Editor: simulation frozen; camera held at the editor-set fit-world transform */
  tGlobal+=dt;
  if(!TOOL_CLEAN&&!roundOver&&Number.isFinite(timer)){timer-=dt;if(timer<=0)timeoutRound();}   /* test arena: no round timer */
  for(const f of fighters){readInput(f,dt);updateFighter(f,dt);}
@@ -3158,10 +3161,10 @@ function updateSimulation(dt){
  {const sawActive=projectiles.some(p=>p.saw);   /* keep the whole gash while the saw is still rolling; fade it only once the saw is gone */
   for(let i=sawCuts.length-1;i>=0;i--){if(!sawActive)sawCuts[i].t+=dt;if(sawCuts[i].t>=sawCuts[i].life)sawCuts.splice(i,1);}}
  if(!TOOL_CLEAN){   /* test arena: no stage hazards run */
- if(typeof updateDog==="function")updateDog(dt);   /* roaming dog hazard (js/dog.js) */
- if(typeof updateToilet==="function")updateToilet(dt);   /* right-side toilet event (js/toilet.js) */
- if(typeof updateCars==="function")updateCars(dt);   /* left-side car explosion event (js/cars.js) */
- if(typeof updateCarProp==="function")updateCarProp(dt);   /* burning-wreck fire hazard (js/car.js) */
+ if(typeof updateDog==="function")updateDog(dt);   /* roaming dog hazard (stages/kabatepe/dog.js) */
+ if(typeof updateToilet==="function")updateToilet(dt);   /* right-side toilet event (stages/kabatepe/toilet.js) */
+ if(typeof updateCars==="function")updateCars(dt);   /* left-side car explosion event (stages/kabatepe/cars.js) */
+ if(typeof updateCarProp==="function")updateCarProp(dt);   /* burning-wreck fire hazard (stages/kabatepe/car.js) */
  }
  /* ---- camera: follow the pair; slowly pull back (zoom out) when they're far apart ---- */
  {const[a,b]=fighters;
@@ -3215,7 +3218,8 @@ function renderGame(){
     (visW*visH*bden^2 is invariant) -> no fps cliff on zoom-out, and no visible quality loss since the
     on-screen sampling density (s*dpx) is matched exactly (x SSAA). */
  const bden=Math.max(1,Math.min(dsat, dpx*s*_ssaa));
- const wx0=camX-CAM_PAD, wy0=(GROUND-GROUND/s)-CAM_PAD-(TOOL_CLEAN?TOOL_CAM_YOFF:0);     /* top-left of the (padded) visible world region (test arena raises the framing for jump headroom) */
+ const wy0base=TOOL_MAP?_mapCamTop:((GROUND-GROUND/s)-(TOOL_CLEAN?TOOL_CAM_YOFF:0));   /* Map Editor frames vertically by _mapCamTop (free pan); the game frames around GROUND */
+ const wx0=camX-CAM_PAD, wy0=wy0base-CAM_PAD;     /* top-left of the (padded) visible world region */
  const visW=W/s+CAM_PAD*2, visH=H/s+CAM_PAD*2;
  const buf=worldBuffer(dsat), b=_worldCtx;
  const sw=Math.min(buf.width,  visW*bden), sh=Math.min(buf.height, visH*bden);
@@ -3234,36 +3238,36 @@ function renderGame(){
  const _prevCtx=ctx; ctx=b;                /* redirect every world-draw below into the buffer */
  drawStage(tGlobal);                       /* backdrop now scales WITH the fighters (one uniform zoom) */
  if(!TOOL_CLEAN){   /* Stats&Test clean arena: skip all stage decor + platforms */
- if(typeof drawWaves==="function")drawWaves();      /* subtle water shimmer on the sea (js/waves.js) */
- if(typeof drawBirds==="function")drawBirds();      /* ambient seagulls in the sky (js/birds.js) — behind everything */
- if(typeof drawShark==="function")drawShark();      /* shark fin in the distant sea (js/shark.js) — behind everything */
- if(typeof drawCars==="function")drawCars();        /* parked traffic on the left road (js/cars.js) — behind fighters */
- if(typeof drawRope==="function")drawRope();        /* coiled mooring ropes on the pier (js/rope.js) — behind fighters */
- if(typeof drawPallets==="function")drawPallets();  /* wooden pallets in the otoparks (js/pallet.js) — behind fighters */
- if(typeof drawTrashbins==="function")drawTrashbins();  /* trashbins (js/trashbin.js) — behind fighters */
- if(typeof drawSodaUmbrellas==="function")drawSodaUmbrellas();  /* soda umbrellas (js/sodaumbrella.js) — behind the chairs */
- if(typeof drawSeats==="function")drawSeats();  /* plastic chairs (js/seat.js) — behind fighters */
- if(typeof drawBlackgammonTables==="function")drawBlackgammonTables();  /* backgammon tables (js/blackgammon.js) — in front of the chair */
- if(typeof drawStools==="function")drawStools();  /* wooden stools (js/stool.js) — in front of the table */
- /* compressor NPC disabled for now — code kept in js/compressor.js; re-enable by uncommenting:*/
- if(typeof drawCompMech==="function")drawCompMech();
- if(typeof drawCradleBehind==="function")drawCradleBehind();   /* 2 stacked crates by the compressor (js/plasticcradle.js) — behind fighters */
- if(typeof drawCompressorGuy==="function")drawCompressorGuy();
- if(typeof drawWetsuitsDry==="function")drawWetsuitsDry();
- if(typeof drawYellowFins==="function")drawYellowFins();   /* diving fins in front of the wetsuit rack (js/yellowfin.js) */
- if(typeof drawScubaGlassesBehind==="function")drawScubaGlassesBehind();   /* diving mask by the boat (js/scubaglasses.js) — behind fighters */
- if(typeof drawFishnet==="function")drawFishnet();
- if(typeof drawFishbox==="function")drawFishbox();
- if(typeof drawFishingRod==="function")drawFishingRod();
- if(typeof drawSittingGuy==="function")drawSittingGuy();   /* seated NPC by the sea (js/sitter.js) — behind fighters */
- if(typeof drawbalikGuy ==="function")drawbalikGuy(); /*balikci*/
- if(typeof drawKids ==="function")drawKids(); /*Talking kids*/
- if(typeof drawLightHouse==="function")drawLightHouse();
- if(typeof drawTourist ==="function")drawTourist(); /*Talking Tourist*/
- if(typeof drawKid==="function")drawKid();   /* snacking kid on top of the boat (js/kid.js) — behind fighters */
+ if(typeof drawWaves==="function")drawWaves();      /* subtle water shimmer on the sea (stages/kabatepe/waves.js) */
+ if(typeof drawBirds==="function")drawBirds();      /* ambient seagulls in the sky (stages/kabatepe/birds.js) — behind everything */
+ if(typeof drawShark==="function")drawShark();      /* shark fin in the distant sea (stages/kabatepe/shark.js) — behind everything */
+ if(typeof drawCars==="function")drawCars();        /* parked traffic on the left road (stages/kabatepe/cars.js) — behind fighters */
+ if(typeof drawRope==="function")mapDraw("rope",drawRope);        /* coiled mooring ropes on the pier (stages/kabatepe/rope.js) — behind fighters */
+ if(typeof drawPallets==="function")mapDraw("pallets",drawPallets);  /* wooden pallets in the otoparks (stages/kabatepe/pallet.js) — behind fighters */
+ if(typeof drawTrashbins==="function")drawTrashbins();  /* trashbins (stages/kabatepe/trashbin.js) — behind fighters */
+ if(typeof drawSodaUmbrellas==="function")mapDraw("sodaumbrella",drawSodaUmbrellas);  /* soda umbrellas (stages/kabatepe/sodaumbrella.js) — behind the chairs */
+ if(typeof drawSeats==="function")mapDraw("seat",drawSeats);  /* plastic chairs (stages/kabatepe/seat.js) — behind fighters */
+ if(typeof drawBlackgammonTables==="function")mapDraw("blackgammon",drawBlackgammonTables);  /* backgammon tables (stages/kabatepe/blackgammon.js) — in front of the chair */
+ if(typeof drawStools==="function")mapDraw("stool",drawStools);  /* wooden stools (stages/kabatepe/stool.js) — in front of the table */
+ /* compressor NPC disabled for now — code kept in stages/kabatepe/compressor.js; re-enable by uncommenting:*/
+ if(typeof drawCompMech==="function")mapDraw("compressorMech",drawCompMech);
+ if(typeof drawCradleBehind==="function")drawCradleBehind();   /* 2 stacked crates by the compressor (stages/kabatepe/plasticcradle.js) — behind fighters */
+ if(typeof drawCompressorGuy==="function")mapDraw("compressor",drawCompressorGuy);
+ if(typeof drawWetsuitsDry==="function")mapDraw("wetsuits",drawWetsuitsDry);
+ if(typeof drawYellowFins==="function")mapDraw("yellowfin",drawYellowFins);   /* diving fins in front of the wetsuit rack (stages/kabatepe/yellowfin.js) */
+ if(typeof drawScubaGlassesBehind==="function")mapDraw("scubaglasses",drawScubaGlassesBehind);   /* diving mask by the boat (stages/kabatepe/scubaglasses.js) — behind fighters */
+ if(typeof drawFishnet==="function")mapDraw("fishnet",drawFishnet);
+ if(typeof drawFishbox==="function")mapDraw("fishbox",drawFishbox);
+ if(typeof drawFishingRod==="function")mapDraw("fishingRod",drawFishingRod);
+ if(typeof drawSittingGuy==="function")mapDraw("sitter",drawSittingGuy);   /* seated NPC by the sea (stages/kabatepe/sitter.js) — behind fighters */
+ if(typeof drawbalikGuy ==="function")mapDraw("balik",drawbalikGuy); /*balikci*/
+ if(typeof drawKids ==="function")mapDraw("kids",drawKids); /*Talking kids*/
+ if(typeof drawLightHouse==="function")mapDraw("lighthouse",drawLightHouse);
+ if(typeof drawTourist ==="function")mapDraw("tourist",drawTourist); /*Talking Tourist*/
+ if(typeof drawKid==="function")mapDraw("kid",drawKid);   /* snacking kid on top of the boat (stages/kabatepe/kid.js) — behind fighters */
  if(typeof drawScaffold==="function")drawScaffold();
  drawStageObjects(tGlobal);
- if(typeof drawIronboxes==="function")drawIronboxes();   /* ironboxes on/around the scaffolds (js/ironbox.js) — after scaffolds, behind fighters */
+ if(typeof drawIronboxes==="function")drawIronboxes();   /* ironboxes on/around the scaffolds (stages/kabatepe/ironbox.js) — after scaffolds, behind fighters */
  }   /* end clean-arena decor gate */
  drawGroundFx();   /* double-jump energy stays at the take-off point, behind the fighters */
  drawGhosts();     /* dash afterimages, behind the fighters */
@@ -3273,7 +3277,7 @@ function renderGame(){
     it reads clearly; if BOTH are acting, priority goes to whoever started their move first (earlier
     lastAction). Neutral fighters keep a stable order (no flicker). */
  const acting=f=>f.alive&&(f.state==="attack"||f.state==="special");
- fighters.slice().sort((a,b)=>{
+ if(!TOOL_MAP)fighters.slice().sort((a,b)=>{   /* Map Editor: fighters are not stage objects — hide them for a clean stage */
   if(a.alive!==b.alive)return a.alive?1:-1;            /* dead -> drawn first (behind) */
   const aa=acting(a),ba=acting(b);
   if(aa!==ba)return aa?1:-1;                           /* the acting fighter -> drawn last (on top) */
@@ -3282,13 +3286,13 @@ function renderGame(){
  }).forEach(f=>drawFighter(f,tGlobal));
  if(TOOL_CLEAN||(typeof SETTINGS_showHitboxes==="function"&&SETTINGS_showHitboxes()))for(const f of fighters)if(f.alive)drawFighterBoxes(f);   /* boxes always on in the test arena */
  if(!TOOL_CLEAN){   /* clean arena: skip foreground decor / hazards */
- if(typeof drawRegulatorGuy==="function")drawRegulatorGuy();   /* diver by the tanks (js/regulator.js) — FOREGROUND, in front of the fighters */
- if(typeof drawDog==="function")drawDog();          /* roaming dog hazard (js/dog.js) */
- if(typeof drawToilet==="function")drawToilet();    /* toilet + caretaker (js/toilet.js) */
- if(typeof drawCO2Tank==="function")drawCO2Tank();
- if(typeof drawScubaGlassesFront==="function")drawScubaGlassesFront();   /* 2 masks next to the CO2 tank (js/scubaglasses.js) — foreground */
- if(typeof drawRegulatorGuy==="function")drawRegulatorGuy();   /* diver by the tanks (js/regulator.js) — FOREGROUND, in front of the fighters */
- if(typeof drawCradleFore==="function")drawCradleFore();   /* crate next to the regulator (js/plasticcradle.js) — foreground */
+ if(typeof drawRegulatorGuy==="function")mapDraw("regulator",drawRegulatorGuy);   /* diver by the tanks (stages/kabatepe/regulator.js) — FOREGROUND, in front of the fighters */
+ if(typeof drawDog==="function")drawDog();          /* roaming dog hazard (stages/kabatepe/dog.js) */
+ if(typeof drawToilet==="function")drawToilet();    /* toilet + caretaker (stages/kabatepe/toilet.js) */
+ if(typeof drawCO2Tank==="function")mapDraw("co2tank",drawCO2Tank);
+ if(typeof drawScubaGlassesFront==="function")mapDraw("scubaglasses",drawScubaGlassesFront);   /* 2 masks next to the CO2 tank (stages/kabatepe/scubaglasses.js) — foreground */
+ if(typeof drawRegulatorGuy==="function")mapDraw("regulator",drawRegulatorGuy);   /* diver by the tanks (stages/kabatepe/regulator.js) — FOREGROUND, in front of the fighters */
+ if(typeof drawCradleFore==="function")drawCradleFore();   /* crate next to the regulator (stages/kabatepe/plasticcradle.js) — foreground */
  }   /* end clean-arena foreground gate */
  drawProjectiles();drawCodexes(tGlobal);drawFx();
  ctx=_prevCtx;                             /* world done — back to the real canvas */
@@ -3299,7 +3303,7 @@ function renderGame(){
  ctxMain.imageSmoothingEnabled=true;ctxMain.imageSmoothingQuality="low";   /* bilinear: the down-scale is only ~1/SSAA, so cheap & indistinguishable from "high" here */
  ctxMain.drawImage(buf, 0,0,sw,sh,  s*(-CAM_PAD-fracX)+ox, s*(-CAM_PAD-fracY)+oy, visW*s, visH*s);
  ctxMain.imageSmoothingEnabled=false;
- ctx=ctxMain;if(!TOOL_CLEAN)drawHUD();     /* HUD stays screen-fixed, crisp; hidden in the bare test arena */
+ ctx=ctxMain;if(!TOOL_CLEAN&&!TOOL_MAP)drawHUD();     /* HUD stays screen-fixed, crisp; hidden in the bare test arena + map editor */
  if(typeof SETTINGS_showPerf==="function"&&SETTINGS_showPerf())drawPerfOverlay(dpx,bden,s);
  ctxMain.setTransform(1,0,0,1,0,0);
 }
@@ -3530,6 +3534,26 @@ function TOOL_startPractice(charId,oppId){
  if(fighters[1]){fighters[1]._toolDummy=true;fighters[1]._frameKey=null;}   /* P2 = a plain practice dummy, not a character */
  return true;
 }
+/* Map Editor: show the FULL stage (decor + props) with the whole world fit to the view, simulation
+   FROZEN so the camera stays put while the tool drags objects / edits limits. Called from the tool iframe. */
+function TOOL_startMapView(){
+ TOOL_CLEAN=false; TOOL_MAP=false;   /* build a normal stage first (decor/props require !TOOL_CLEAN) */
+ for(const id of ["fightCtrlHelp","announce"]){const el=document.getElementById(id);if(el)el.style.display="none";}
+ if(!p1Pick)p1Pick=CHARS[0].id; if(!p2Pick)p2Pick=CHARS[1]?CHARS[1].id:CHARS[0].id;
+ cpuMode=true;
+ if(typeof activeSettings!=="undefined")activeSettings.match.pauseOnFocusLoss=false;
+ beginMatch();               /* builds stage 0: decor + props + two idle fighters */
+ TOOL_MAP=true;              /* now freeze the sim (updateSimulation returns early) and hold the camera */
+ TOOL_mapFit();
+ return true;
+}
+/* Map Editor camera: set the world region shown. cx = world x at the left edge, top = world y at the
+   top edge, sc = scale (screen px per world px). The editor owns all zoom/pan; this just receives it. */
+function TOOL_mapCam(cx, top, sc){ if(sc>0)camScale=sc; camX=cx; _mapCamTop=top; }
+/* Default framing: whole world width, stage content ([0..H] world) centred vertically. */
+function TOOL_mapFit(){ const sc=W/WORLD_W; TOOL_mapCam(0, H/2 - H/(2*sc), sc); }
+/* Stage world rect the editor fits to (background fills world [0,0]->[WORLD_W,H]). */
+function TOOL_mapStageRect(){ return { x:0, y:0, w:WORLD_W, h:H, W:W, viewH:H }; }
 document.getElementById("rematchBtn").addEventListener("click",()=>{
  document.getElementById("postFight").classList.remove("show");
  if(typeof SETTINGS_roundTime==="function"){matchRoundTime=SETTINGS_roundTime();matchWinsRequired=SETTINGS_roundsToWin();}
@@ -3546,7 +3570,7 @@ function showPauseMain(){
 }
 /* Freezes the game loop and shows the pause menu (also releases any held input keys so nothing stays 'stuck' pressed). */
 function pauseGame(){
- if(TOOL_CLEAN||paused||!running||roundOver)return;   /* no pause menu in the test arena */
+ if(TOOL_CLEAN||TOOL_MAP||paused||!running||roundOver)return;   /* no pause menu in the test arena / map editor */
  paused=true;
  /* clear held keys so nothing is "stuck" pressed while frozen */
  for(const k in keys)keys[k]=false;

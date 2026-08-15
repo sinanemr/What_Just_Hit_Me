@@ -2,7 +2,7 @@
  * What Just Hit Me — diving MASKS (ScubaGlasses_01) set down around the Kabatepe dive gear.
  * Plain <script>, loaded AFTER engine.js (uses ctx). Pure static decoration.
  *
- * Three masks: TWO next to the CO2 tank (js/CO2Tank.js, world 900/275 — a FOREGROUND item drawn in
+ * Three masks: TWO next to the CO2 tank (stages/kabatepe/CO2Tank.js, world 900/275 — a FOREGROUND item drawn in
  * front of the fighters) and ONE by the boat (on the pier, behind the fighters). Each mask carries a
  * `fore` flag so it renders on the correct layer: drawScubaGlassesFront() after the CO2 tank,
  * drawScubaGlassesBehind() with the ground decor. Scaled well down to match the view.

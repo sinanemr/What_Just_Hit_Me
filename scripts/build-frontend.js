@@ -12,7 +12,7 @@ const root = path.join(__dirname, "..");
 const dist = path.join(root, "dist");
 
 // Everything the game needs to run in the webview:
-const INCLUDE = ["RUN_GAME.html", "js", "css", "characters", "assets"];
+const INCLUDE = ["RUN_GAME.html", "js", "css", "characters", "assets", "stages"];
 
 function rmrf(p) { if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true }); }
 function copyRec(src, dst) {

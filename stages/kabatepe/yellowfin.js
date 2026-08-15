@@ -3,7 +3,7 @@
  * (WetsuitsDry_01) on the Kabatepe pier. Plain <script>, loaded AFTER engine.js (uses ctx). Pure
  * static decoration; drawn right after the wetsuits so the fins sit IN FRONT of them.
  *
- * The rack (js/WetsuitsDry.js) sits at world (920, 222) and spans world x ~882..958. The fins are
+ * The rack (stages/kabatepe/WetsuitsDry.js) sits at world (920, 222) and spans world x ~882..958. The fins are
  * scaled well down to match that view and scattered along its base like gear dropped after a dive.
  */
 "use strict";

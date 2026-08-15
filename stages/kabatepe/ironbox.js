@@ -1,5 +1,5 @@
 /**
- * What Just Hit Me — metal IRONBOXES (Ironbox_01) around and ON TOP of the scaffolds (js/scaffold.js).
+ * What Just Hit Me — metal IRONBOXES (Ironbox_01) around and ON TOP of the scaffolds (stages/kabatepe/scaffold.js).
  * Plain <script>, loaded AFTER engine.js AND scaffold.js (reads the live `props`). Decoration, drawn
  * after the scaffolds and behind the fighters.
  *

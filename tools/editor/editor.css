@@ -18,6 +18,47 @@ body.mode-editor #testView{display:none}
 body.mode-test #main{display:none}
 body.mode-test .editor-only{display:none}
 
+/* ===== map editor view: full-width stage viewport on top, compact toolbar below ===== */
+#mapView{flex:1; display:none; min-height:0; flex-direction:column}
+body.mode-map #mapView{display:flex}
+body.mode-map #main{display:none}
+body.mode-map #testView{display:none}
+body.mode-map .editor-only{display:none}
+body.mode-editor #mapView, body.mode-test #mapView{display:none}
+/* the map's OWN game instance renders the stage behind the overlay; the overlay owns the mouse.
+   the ?tool=1 #game iframe stays hidden in map mode. */
+#mapGame{position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; left:-9999px; top:-9999px; border:0; background:#05040c; z-index:1}
+body.mode-map #mapGame{opacity:1; pointer-events:none; z-index:5}
+body.mode-map #game{opacity:0; pointer-events:none; left:-9999px; top:-9999px}
+#mapHost{flex:1; min-width:0; position:relative; margin:8px 8px 0; background:#05040c; border:1px solid var(--line); border-radius:8px; overflow:hidden}
+#mapOverlay{position:fixed; left:-9999px; top:-9999px; z-index:30}
+.maphint{position:absolute; left:10px; bottom:8px; z-index:31; color:#8a80ad; font-size:11px; pointer-events:none; background:rgba(10,8,22,.55); padding:3px 7px; border-radius:5px}
+.mapdiag{position:absolute; right:10px; top:8px; z-index:31; color:#9fd0ff; font:11px/1.4 ui-monospace,Consolas,monospace; pointer-events:none; background:rgba(10,8,22,.7); padding:5px 8px; border-radius:5px; white-space:pre; display:none}
+.mapdiag.on{display:block}
+
+/* bottom toolbar */
+#mapToolbar{flex:0 0 auto; display:flex; align-items:stretch; gap:10px; padding:8px 10px; background:linear-gradient(#171226,#12101f); border-top:1px solid var(--line); overflow-x:auto}
+.tgroup{display:flex; flex-direction:column; gap:5px; padding:4px 10px; border-right:1px solid var(--line)}
+.tgroup:last-child{border-right:0}
+.tglabel{font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--dim)}
+.tglabel span{color:var(--ink); text-transform:none; letter-spacing:0; font-weight:600}
+.tgbody{display:flex; align-items:center; gap:8px}
+#tgObjects{flex:0 1 auto; min-width:0}
+.objrow{display:flex; gap:5px; flex-wrap:wrap; align-items:center}
+.objitem{display:flex; align-items:center; gap:6px; padding:6px 10px; background:#0e0b1c; border:1px solid var(--line); border-radius:7px; cursor:pointer; font-size:12px; white-space:nowrap}
+.objitem:hover{border-color:var(--violet)}
+.objitem.on{background:var(--violet); border-color:var(--violet); color:#fff}
+.objitem .dot{width:8px; height:8px; border-radius:50%; background:var(--gold); flex:0 0 auto}
+.objitem.on .dot{background:#fff}
+.objitem .moved{font-size:9px; color:var(--gold); margin-left:2px}
+.objitem.on .moved{color:#ffe9ad}
+.fld{display:flex; flex-direction:column; font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); gap:2px}
+.fld input{width:62px; background:#0e0b1c; border:1px solid var(--line); border-radius:6px; color:var(--ink); padding:5px 7px; font-size:12px; outline:none}
+.fld input:focus{border-color:var(--violet)}
+.fld input:disabled{opacity:.4}
+.btn.sm{padding:6px 10px; font-size:12px}
+.zoompct{min-width:46px; text-align:center; font-size:12px; font-weight:600; color:var(--ink)}
+
 /* stats & test view */
 #testView{flex:1; display:flex; min-height:0}
 #statsPanel{flex:0 0 320px; background:var(--panel); border-right:1px solid var(--line); padding:14px; overflow-y:auto; display:flex; flex-direction:column; gap:16px}
